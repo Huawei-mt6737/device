@@ -1,9 +1,9 @@
-From ec4bfdff65794dbbc271dde799410959a99b44e3 Mon Sep 17 00:00:00 2001
+From bd2eacac958f68b8b49b712a033586dd0b198adb Mon Sep 17 00:00:00 2001
 From: mdeejay <mdjrussia@gmail.com>
-Date: Mon, 3 Jul 2017 01:17:04 +0700
+Date: Wed, 5 Jul 2017 21:17:39 +0700
 Subject: changes for MTK
 
-Change-Id: Ic4e5bcc72faea47b3eab2249fb099fb3fcf0532f
+Change-Id: I36211d4ee7833b377c6b154a9972986f6fef64d4
 
 diff --git a/include/netutils/ifc.h b/include/netutils/ifc.h
 index 3b272343d..89028a38c 100644
@@ -33,7 +33,7 @@ index 3b272343d..89028a38c 100644
  
  #endif /* _NETUTILS_IFC_H_ */
 diff --git a/init/init.cpp b/init/init.cpp
-index 7a370596e..f0b0d4f0f 100755
+index 7a370596e..3dbea5eba 100755
 --- a/init/init.cpp
 +++ b/init/init.cpp
 @@ -85,7 +85,7 @@ int have_console;
@@ -45,6 +45,29 @@ index 7a370596e..f0b0d4f0f 100755
  
  bool waiting_for_exec = false;
  
+@@ -439,7 +439,7 @@ static void selinux_init_all_handles(void)
+     selinux_android_set_sehandle(sehandle);
+     sehandle_prop = selinux_android_prop_context_handle();
+ }
+-
++#if 0
+ enum selinux_enforcing_status { SELINUX_PERMISSIVE, SELINUX_ENFORCING };
+ 
+ static selinux_enforcing_status selinux_status_from_cmdline() {
+@@ -453,11 +453,11 @@ static selinux_enforcing_status selinux_status_from_cmdline() {
+ 
+     return status;
+ }
+-
++#endif
+ static bool selinux_is_enforcing(void)
+ {
+     if (ALLOW_PERMISSIVE_SELINUX) {
+-        return selinux_status_from_cmdline() == SELINUX_ENFORCING;
++        return false;  // selinux_status_from_cmdline() == SELINUX_ENFORCING;
+     }
+     return true;
+ }
 diff --git a/init/init.h b/init/init.h
 index 345d442c0..f93d0c5ba 100644
 --- a/init/init.h
@@ -58,6 +81,25 @@ index 345d442c0..f93d0c5ba 100644
  extern bool waiting_for_exec;
  extern int have_console;
  extern std::string console_name;
+diff --git a/init/service.cpp b/init/service.cpp
+index 8127e708d..a09fd8f71 100644
+--- a/init/service.cpp
++++ b/init/service.cpp
+@@ -371,12 +371,14 @@ bool Service::Start() {
+             scon = ret_scon;
+             free(ret_scon);
+         }
++#if 0
+         if (rc == 0 && scon == mycon) {
+             ERROR("Service %s does not have a SELinux domain defined.\n", name_.c_str());
+             free(mycon);
+             free(fcon);
+             return false;
+         }
++#endif
+         free(mycon);
+         free(fcon);
+         if (rc < 0) {
 diff --git a/libcutils/fs_config.c b/libcutils/fs_config.c
 index 68cfcbe00..f19238606 100644
 --- a/libcutils/fs_config.c
