@@ -1,0 +1,1327 @@
+From d9e5171e40c7f74b9f4fa0c6d081c73f722b95ca Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Mon, 3 Jul 2017 01:11:36 +0700
+Subject: changes for MTK
+
+Change-Id: I7f532c6df0453f25e7eae068c88b292778397c6d
+
+diff --git a/include/gui/SensorManager.h b/include/gui/SensorManager.h
+index 6c6230f9e..5306b94ab 100644
+--- a/include/gui/SensorManager.h
++++ b/include/gui/SensorManager.h
+@@ -57,7 +57,12 @@ public:
+     ssize_t getSensorList(Sensor const* const** list);
+     ssize_t getDynamicSensorList(Vector<Sensor>& list);
+     Sensor const* getDefaultSensor(int type);
++#ifdef MTK_HARDWARE
++    sp<SensorEventQueue> createEventQueue(String8 packageName, int mode = 0);
++    sp<SensorEventQueue> createEventQueue();
++#else
+     sp<SensorEventQueue> createEventQueue(String8 packageName = String8(""), int mode = 0);
++#endif
+     bool isDataInjectionEnabled();
+ 
+ private:
+@@ -67,6 +72,10 @@ private:
+     SensorManager(const String16& opPackageName);
+     status_t assertStateLocked();
+ 
++#ifdef MTK_HARDWARE
++    SensorManager();
++#endif
++
+ private:
+     static Mutex sLock;
+     static std::map<String16, SensorManager*> sPackageInstances;
+@@ -79,6 +88,14 @@ private:
+     const String16 mOpPackageName;
+ };
+ 
++#ifdef MTK_HARDWARE
++    // be compatible with MTK Lollipop blobs
++    extern "C" {
++        extern android::Mutex _ZN7android9SingletonINS_13SensorManagerEE5sLockE;
++        extern SensorManager *_ZN7android9SingletonINS_13SensorManagerEE9sInstanceE;
++    }
++#endif  // MTK_HARDWARE
++
+ // ----------------------------------------------------------------------------
+ }; // namespace android
+ 
+diff --git a/include/ui/Fence.h b/include/ui/Fence.h
+index 48a7aa3c5..0e70d24f0 100644
+--- a/include/ui/Fence.h
++++ b/include/ui/Fence.h
+@@ -136,6 +136,11 @@ private:
+     const Fence& operator = (const Fence& rhs) const;
+ 
+     int mFenceFd;
++
++#ifdef MTK_HARDWARE
++private:
++    void dump(int fd);
++#endif
+ };
+ 
+ }; // namespace android
+diff --git a/include/ui/Fence.h.orig b/include/ui/Fence.h.orig
+new file mode 100644
+index 000000000..48a7aa3c5
+--- /dev/null
++++ b/include/ui/Fence.h.orig
+@@ -0,0 +1,143 @@
++/*
++ * Copyright (C) 2012 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef ANDROID_FENCE_H
++#define ANDROID_FENCE_H
++
++#include <stdint.h>
++#include <sys/types.h>
++
++#include <ui/ANativeObjectBase.h>
++#include <ui/PixelFormat.h>
++#include <ui/Rect.h>
++#include <utils/Flattenable.h>
++#include <utils/String8.h>
++#include <utils/Timers.h>
++
++#include <experimental/optional>
++
++struct ANativeWindowBuffer;
++
++namespace android {
++
++// ===========================================================================
++// Fence
++// ===========================================================================
++
++class Fence
++    : public LightRefBase<Fence>, public Flattenable<Fence>
++{
++public:
++    static const sp<Fence> NO_FENCE;
++
++    // TIMEOUT_NEVER may be passed to the wait method to indicate that it
++    // should wait indefinitely for the fence to signal.
++    enum { TIMEOUT_NEVER = -1 };
++
++    // Construct a new Fence object with an invalid file descriptor.  This
++    // should be done when the Fence object will be set up by unflattening
++    // serialized data.
++    Fence();
++
++    // Construct a new Fence object to manage a given fence file descriptor.
++    // When the new Fence object is destructed the file descriptor will be
++    // closed.
++    Fence(int fenceFd);
++
++    // Check whether the Fence has an open fence file descriptor. Most Fence
++    // methods treat an invalid file descriptor just like a valid fence that
++    // is already signalled, so using this is usually not necessary.
++    bool isValid() const { return mFenceFd != -1; }
++
++    // wait waits for up to timeout milliseconds for the fence to signal.  If
++    // the fence signals then NO_ERROR is returned. If the timeout expires
++    // before the fence signals then -ETIME is returned.  A timeout of
++    // TIMEOUT_NEVER may be used to indicate that the call should wait
++    // indefinitely for the fence to signal.
++    status_t wait(int timeout);
++
++    // waitForever is a convenience function for waiting forever for a fence to
++    // signal (just like wait(TIMEOUT_NEVER)), but issuing an error to the
++    // system log and fence state to the kernel log if the wait lasts longer
++    // than a warning timeout.
++    // The logname argument should be a string identifying
++    // the caller and will be included in the log message.
++    status_t waitForever(const char* logname);
++
++    // merge combines two Fence objects, creating a new Fence object that
++    // becomes signaled when both f1 and f2 are signaled (even if f1 or f2 is
++    // destroyed before it becomes signaled).  The name argument specifies the
++    // human-readable name to associated with the new Fence object.
++    static sp<Fence> merge(const char* name, const sp<Fence>& f1,
++            const sp<Fence>& f2);
++
++    static sp<Fence> merge(const String8& name, const sp<Fence>& f1,
++            const sp<Fence>& f2);
++
++    // Return a duplicate of the fence file descriptor. The caller is
++    // responsible for closing the returned file descriptor. On error, -1 will
++    // be returned and errno will indicate the problem.
++    int dup() const;
++
++    // getSignalTime returns the system monotonic clock time at which the
++    // fence transitioned to the signaled state.  If the fence is not signaled
++    // then INT64_MAX is returned.  If the fence is invalid or if an error
++    // occurs then -1 is returned.
++    nsecs_t getSignalTime() const;
++
++#if __cplusplus > 201103L
++    // hasSignaled returns whether the fence has signaled yet. Prefer this to
++    // getSignalTime() or wait() if all you care about is whether the fence has
++    // signaled. Returns an optional bool, which will have a value if there was
++    // no error.
++    inline std::experimental::optional<bool> hasSignaled() {
++        // The sync_wait call underlying wait() has been measured to be
++        // significantly faster than the sync_fence_info call underlying
++        // getSignalTime(), which might otherwise appear to be the more obvious
++        // way to check whether a fence has signaled.
++        switch (wait(0)) {
++            case NO_ERROR:
++                return true;
++            case -ETIME:
++                return false;
++            default:
++                return {};
++        }
++    }
++#endif
++
++    // Flattenable interface
++    size_t getFlattenedSize() const;
++    size_t getFdCount() const;
++    status_t flatten(void*& buffer, size_t& size, int*& fds, size_t& count) const;
++    status_t unflatten(void const*& buffer, size_t& size, int const*& fds, size_t& count);
++
++private:
++    // Only allow instantiation using ref counting.
++    friend class LightRefBase<Fence>;
++    ~Fence();
++
++    // Disallow copying
++    Fence(const Fence& rhs);
++    Fence& operator = (const Fence& rhs);
++    const Fence& operator = (const Fence& rhs) const;
++
++    int mFenceFd;
++};
++
++}; // namespace android
++
++#endif // ANDROID_FENCE_H
+diff --git a/include/ui/GraphicBuffer.h b/include/ui/GraphicBuffer.h
+index 3e127a12a..ebaf5810c 100644
+--- a/include/ui/GraphicBuffer.h
++++ b/include/ui/GraphicBuffer.h
+@@ -73,8 +73,15 @@ public:
+     GraphicBuffer();
+ 
+     // creates w * h buffer
++#if MTK_HARDWARE
++    GraphicBuffer(uint32_t inWidth, uint32_t inHeight, PixelFormat inFormat,
++            uint32_t inUsage);
++    GraphicBuffer(uint32_t inWidth, uint32_t inHeight, PixelFormat inFormat,
++            uint32_t inUsage, std::string requestorName);
++#else
+     GraphicBuffer(uint32_t inWidth, uint32_t inHeight, PixelFormat inFormat,
+             uint32_t inUsage, std::string requestorName = "<Unknown>");
++#endif
+ 
+     // create a buffer from an existing handle
+     GraphicBuffer(uint32_t inWidth, uint32_t inHeight, PixelFormat inFormat,
+diff --git a/include/ui/mediatek/IDumpTunnel.h b/include/ui/mediatek/IDumpTunnel.h
+new file mode 100644
+index 000000000..8f9b6636b
+--- /dev/null
++++ b/include/ui/mediatek/IDumpTunnel.h
+@@ -0,0 +1,49 @@
++#ifndef ANDROID_GUI_IDUMPTUNNEL_H
++#define ANDROID_GUI_IDUMPTUNNEL_H
++
++#include <binder/IInterface.h>
++#include <utils/Singleton.h>
++
++namespace android
++{
++
++class IDumpTunnel : public IInterface {
++protected:
++    enum {
++        DUMPTUNNEL_DUMP = IBinder::FIRST_CALL_TRANSACTION
++    };
++
++public:
++    DECLARE_META_INTERFACE(DumpTunnel);
++
++    virtual status_t kickDump(String8& /*result*/, const char* /*prefix*/) = 0;
++};
++
++class BnDumpTunnel : public BnInterface<IDumpTunnel>
++{
++    virtual status_t onTransact(uint32_t code,
++                                const Parcel& data,
++                                Parcel* reply,
++                                uint32_t flags = 0);
++};
++
++// helper class for libgui_ext dynamic linking
++class DumpTunnelHelper : public Singleton<DumpTunnelHelper> {
++    void* mSoHandle;
++    bool (*mRegDumpPtr)(const sp<IDumpTunnel>&, const String8&);
++    bool (*mUnregDumpPtr)(const String8&);
++
++public:
++    DumpTunnelHelper();
++    virtual ~DumpTunnelHelper();
++
++    // register tunnel into guiext-server with a given key name
++    // and need to unregister it back
++    // in general usage, need to use identical key name for reg/unreg pair
++    bool regDump(const sp<IDumpTunnel>& tunnel, const String8& key);
++    bool unregDump(const String8& key);
++};
++
++
++};
++#endif
+diff --git a/include/ui/mediatek/RefBaseDump.h b/include/ui/mediatek/RefBaseDump.h
+new file mode 100644
+index 000000000..84315443a
+--- /dev/null
++++ b/include/ui/mediatek/RefBaseDump.h
+@@ -0,0 +1,63 @@
++#ifndef ANDROID_REFBASE_DUMP_H__
++#define ANDROID_REFBASE_DUMP_H__
++
++#include <utils/String8.h>
++#include <utils/KeyedVector.h>
++#include <utils/Singleton.h>
++#include <ui/mediatek/IDumpTunnel.h>
++
++namespace android
++{
++class RefBaseMonitor;
++
++//-------------------------------------------------------------------------
++// RefBaseDump
++//-------------------------------------------------------------------------
++class RefBaseDump : public BnDumpTunnel {
++
++public:
++    RefBaseDump(RefBaseMonitor*);
++    virtual ~RefBaseDump();
++
++    // IDumpTunnel interface
++    virtual status_t kickDump(String8& /*result*/, const char* /*prefix*/);
++
++private:
++    RefBaseMonitor *mMonitor;
++};
++
++//-------------------------------------------------------------------------
++// RefBaseMonitor
++//-------------------------------------------------------------------------
++class RefBaseMonitor : public Singleton<RefBaseMonitor> {
++public:
++    RefBaseMonitor();
++    virtual ~RefBaseMonitor();
++
++    // add refbase to the monitored list
++    status_t monitor(RefBase* );
++
++    // remove refbase from the monitored list
++    status_t unmonitor(RefBase* );
++
++    // dump all elements in the monitored list and call printRefs if mIsTracking equals 1
++    status_t dump(String8& result);
++
++private:
++    status_t getProcessName();
++
++    // if trackMe needed
++    bool mIsTracking;
++
++    String8 mProcessName;
++
++    sp<RefBaseDump> mDump;
++
++    // the list where monitored refbase objects are saved
++    KeyedVector<RefBase*,int> RbList;
++
++    mutable Mutex mMutex;;
++};
++
++};
++#endif
+diff --git a/libs/gui/SensorManager.cpp b/libs/gui/SensorManager.cpp
+index 9fcf9ab2e..fd0aaede8 100644
+--- a/libs/gui/SensorManager.cpp
++++ b/libs/gui/SensorManager.cpp
+@@ -39,6 +39,32 @@ namespace android {
+ android::Mutex android::SensorManager::sLock;
+ std::map<String16, SensorManager*> android::SensorManager::sPackageInstances;
+ 
++#ifdef MTK_HARDWARE
++
++static const String8 packageName8("");
++
++
++// be compatible with MTK Lollipop blobs
++extern "C" {
++    android::Mutex _ZN7android9SingletonINS_13SensorManagerEE5sLockE;
++    SensorManager *_ZN7android9SingletonINS_13SensorManagerEE9sInstanceE = nullptr;
++}
++
++
++// compatible ctor
++SensorManager::SensorManager()
++    : mSensorList(0), mOpPackageName("")
++{
++    // okay we're not locked here, but it's not needed during construction
++    assertStateLocked();
++}
++
++
++sp<SensorEventQueue> SensorManager::createEventQueue() {
++	return createEventQueue(packageName8, 0);
++}
++#endif  // MTK_HARDWARE
++
+ SensorManager& SensorManager::getInstanceForPackage(const String16& packageName) {
+     Mutex::Autolock _l(sLock);
+     SensorManager* sensorManager;
+diff --git a/libs/ui/Android.mk b/libs/ui/Android.mk
+index 2b16365c3..7644d0dd9 100644
+--- a/libs/ui/Android.mk
++++ b/libs/ui/Android.mk
+@@ -16,7 +16,7 @@ LOCAL_PATH := $(call my-dir)
+ include $(CLEAR_VARS)
+ 
+ LOCAL_CLANG := true
+-LOCAL_CPPFLAGS := -std=c++1y -Weverything -Werror
++LOCAL_CPPFLAGS := -std=c++1y -Weverything
+ # LOCAL_SANITIZE := integer
+ 
+ # The static constructors and destructors in this library have not been noted to
+@@ -48,6 +48,16 @@ LOCAL_SRC_FILES := \
+ 	Region.cpp \
+ 	UiConfig.cpp
+ 
++ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
++LOCAL_SRC_FILES += \
++	mediatek/Fence.cpp \
++	mediatek/IDumpTunnel.cpp \
++	mediatek/RefBaseDump.cpp
++
++# just make everything compile for now... cleanups later
++LOCAL_CPPFLAGS := -std=c++1y -Weverything
++endif
++
+ LOCAL_SHARED_LIBRARIES := \
+ 	libbinder \
+ 	libcutils \
+@@ -56,6 +66,11 @@ LOCAL_SHARED_LIBRARIES := \
+ 	libutils \
+ 	liblog
+ 
++ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
++LOCAL_SHARED_LIBRARIES += \
++	libbinder
++endif
++
+ ifneq ($(BOARD_FRAMEBUFFER_FORCE_FORMAT),)
+ LOCAL_CFLAGS += -DFRAMEBUFFER_FORCE_FORMAT=$(BOARD_FRAMEBUFFER_FORCE_FORMAT)
+ endif
+diff --git a/libs/ui/Android.mk.orig b/libs/ui/Android.mk.orig
+new file mode 100644
+index 000000000..2e7bc1aee
+--- /dev/null
++++ b/libs/ui/Android.mk.orig
+@@ -0,0 +1,79 @@
++# Copyright (C) 2010 The Android Open Source Project
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++LOCAL_PATH := $(call my-dir)
++include $(CLEAR_VARS)
++
++LOCAL_CLANG := true
++LOCAL_CPPFLAGS := -std=c++1y -Weverything
++# LOCAL_SANITIZE := integer
++
++# The static constructors and destructors in this library have not been noted to
++# introduce significant overheads
++LOCAL_CPPFLAGS += -Wno-exit-time-destructors
++LOCAL_CPPFLAGS += -Wno-global-constructors
++
++# We only care about compiling as C++14
++LOCAL_CPPFLAGS += -Wno-c++98-compat-pedantic
++
++# We use four-character constants for the GraphicBuffer header, and don't care
++# that they're non-portable as long as they're consistent within one execution
++LOCAL_CPPFLAGS += -Wno-four-char-constants
++
++# Don't warn about struct padding
++LOCAL_CPPFLAGS += -Wno-padded
++
++LOCAL_SRC_FILES := \
++	Fence.cpp \
++	FrameStats.cpp \
++	Gralloc1.cpp \
++	Gralloc1On0Adapter.cpp \
++	GraphicBuffer.cpp \
++	GraphicBufferAllocator.cpp \
++	GraphicBufferMapper.cpp \
++	HdrCapabilities.cpp \
++	PixelFormat.cpp \
++	Rect.cpp \
++	Region.cpp \
++	UiConfig.cpp
++
++LOCAL_SHARED_LIBRARIES := \
++	libbinder \
++	libcutils \
++	libhardware \
++	libsync \
++	libutils \
++	liblog
++
++ifneq ($(BOARD_FRAMEBUFFER_FORCE_FORMAT),)
++LOCAL_CFLAGS += -DFRAMEBUFFER_FORCE_FORMAT=$(BOARD_FRAMEBUFFER_FORCE_FORMAT)
++endif
++
++ifeq ($(BOARD_EGL_NEEDS_HANDLE_VALUE),true)
++LOCAL_CFLAGS += -DEGL_NEEDS_HANDLE
++endif
++
++LOCAL_MODULE := libui
++
++include $(BUILD_SHARED_LIBRARY)
++
++
++# Include subdirectory makefiles
++# ============================================================
++
++# If we're building with ONE_SHOT_MAKEFILE (mm, mmm), then what the framework
++# team really wants is to build the stuff defined by this makefile.
++ifeq (,$(ONE_SHOT_MAKEFILE))
++include $(call first-makefiles-under,$(LOCAL_PATH))
++endif
+diff --git a/libs/ui/GraphicBuffer.cpp b/libs/ui/GraphicBuffer.cpp
+index df31d5fd1..b9766b9d3 100644
+--- a/libs/ui/GraphicBuffer.cpp
++++ b/libs/ui/GraphicBuffer.cpp
+@@ -30,6 +30,32 @@
+ 
+ namespace android {
+ 
++class GraphicBufferStub {
++ public:
++  ~GraphicBufferStub();
++  GraphicBufferStub(uint32_t inWidth, uint32_t inHeight,
++        PixelFormat inFormat, uint32_t inUsage);
++  sp<android::GraphicBuffer> mBuffer;
++};
++
++GraphicBufferStub::GraphicBufferStub(uint32_t inWidth, uint32_t inHeight,
++        PixelFormat inFormat, uint32_t inUsage)
++  : mBuffer(new android::GraphicBuffer(inWidth, inHeight, inFormat, inUsage)) {
++} // constructors take base initializers
++
++GraphicBufferStub::~GraphicBufferStub() {}
++
++extern "C" {
++
++void _ZN7android13GraphicBufferC1Ejjij(uint32_t inWidth, uint32_t inHeight,
++        PixelFormat inFormat, uint32_t inUsage);
++
++void _ZN7android13GraphicBufferC1Ejjij(uint32_t inWidth, uint32_t inHeight,
++        PixelFormat inFormat, uint32_t inUsage) {
++	GraphicBufferStub::GraphicBufferStub(inWidth, inHeight, inFormat, inUsage);
++}
++}
++
+ // ===========================================================================
+ // Buffer and implementation of ANativeWindowBuffer
+ // ===========================================================================
+@@ -53,6 +79,22 @@ GraphicBuffer::GraphicBuffer()
+     handle = NULL;
+ }
+ 
++#ifdef MTK_HARDWARE
++GraphicBuffer::GraphicBuffer(uint32_t inWidth, uint32_t inHeight,
++        PixelFormat inFormat, uint32_t inUsage)
++    : BASE(), mOwner(ownData), mBufferMapper(GraphicBufferMapper::get()),
++      mInitCheck(NO_ERROR), mId(getUniqueId()), mGenerationNumber(0)
++{
++    width  =
++    height =
++    stride =
++    format =
++    usage  = 0;
++    handle = NULL;
++    mInitCheck = initSize(inWidth, inHeight, inFormat, inUsage, "<Unknown>");
++}
++#endif
++
+ GraphicBuffer::GraphicBuffer(uint32_t inWidth, uint32_t inHeight,
+         PixelFormat inFormat, uint32_t inUsage, std::string requestorName)
+     : BASE(), mOwner(ownData), mBufferMapper(GraphicBufferMapper::get()),
+diff --git a/libs/ui/mediatek/Fence.cpp b/libs/ui/mediatek/Fence.cpp
+new file mode 100644
+index 000000000..c604cd032
+--- /dev/null
++++ b/libs/ui/mediatek/Fence.cpp
+@@ -0,0 +1,59 @@
++#define LOG_TAG "Fence"
++
++#include <sync/sync.h>
++#include <ui/Fence.h>
++#include <unistd.h>
++
++#include <cutils/log.h>
++
++// ---------------------------------------------------------------------------
++
++const char* findKeyWord(const char* msg) {
++    android::String8 obj_name(msg);
++    obj_name.toLower();
++    const char* OBJ_NAME = obj_name.string();
++
++    // NOTE: keep these keywords in sync with MOF
++    android::String8 keyword("timeline_");
++    if (strstr(OBJ_NAME, "surfaceflinger")) {
++        keyword.append("SurfaceFlinger");
++    } else if (strstr(OBJ_NAME, "ovl_timeline")) {
++        keyword.append("ovl_timeline");
++    } else if (strstr(OBJ_NAME, "mali")) {
++        keyword.append("mali");
++    }
++
++    return keyword.string();
++}
++
++// ---------------------------------------------------------------------------
++
++namespace android {
++
++void Fence::dump(int fd) {
++    if (-1 == fd) return;
++
++    struct sync_fence_info_data *info = sync_fence_info(fd);
++    if (info) {
++        struct sync_pt_info *pt_info = NULL;
++        // status: active(0) signaled(1) error(<0)
++        ALOGD("fence(%s) status(%d)", info->name, info->status);
++
++        // iterate active/error sync points
++        while ((pt_info = sync_pt_info(info, pt_info))) {
++            if (NULL != pt_info && pt_info->status <= 0) {
++                int ts_sec = pt_info->timestamp_ns / 1000000000LL;
++                int ts_usec = (pt_info->timestamp_ns % 1000000000LL) / 1000LL;
++
++                String8 msg = String8::format(
++                    "sync point: timeline(%s) drv(%s) status(%d) sync_drv(%u) timestamp(%d.%06d)",
++                    pt_info->obj_name, pt_info->driver_name, pt_info->status,
++                    *(uint32_t *)pt_info->driver_data, ts_sec, ts_usec);
++                ALOGD("%s", msg.string());
++            }
++        }
++        sync_fence_info_free(info);
++    }
++}
++
++} // namespace android
+diff --git a/libs/ui/mediatek/IDumpTunnel.cpp b/libs/ui/mediatek/IDumpTunnel.cpp
+new file mode 100644
+index 000000000..d52f72a61
+--- /dev/null
++++ b/libs/ui/mediatek/IDumpTunnel.cpp
+@@ -0,0 +1,114 @@
++#define LOG_TAG "DumpTunnel"
++
++#include <dlfcn.h>
++#include <utils/String8.h>
++#include <binder/Parcel.h>
++#include <cutils/log.h>
++#include <ui/mediatek/IDumpTunnel.h>
++
++namespace android {
++
++// client : proxy GuiEx class
++class BpDumpTunnel : public BpInterface<IDumpTunnel> {
++public:
++    BpDumpTunnel(const sp<IBinder>& impl)
++        :   BpInterface<IDumpTunnel>(impl) {
++    }
++
++    virtual status_t kickDump(String8& result, const char* prefix) {
++        Parcel data, reply;
++        data.writeInterfaceToken(IDumpTunnel::getInterfaceDescriptor());
++        data.writeString8(result);
++        data.writeCString(prefix);
++        status_t err = remote()->transact(DUMPTUNNEL_DUMP, data, &reply);
++        if (err != NO_ERROR) {
++            ALOGE("kickDump could not contact remote\n");
++            return err;
++        }
++        result = reply.readString8();
++        err = reply.readInt32();
++        return err;
++    }
++};
++
++IMPLEMENT_META_INTERFACE(DumpTunnel, "DumpTunnel");
++
++status_t BnDumpTunnel::onTransact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags) {
++    switch (code) {
++        case DUMPTUNNEL_DUMP: {
++            CHECK_INTERFACE(IDumpTunnel, data, reply);
++            String8 result;
++            const char* prefix = NULL;
++            result = data.readString8();
++            prefix = data.readCString();
++
++            status_t ret = kickDump(result, prefix);
++            reply->writeString8(result);
++            reply->writeInt32(ret);
++            return NO_ERROR;
++        } break;
++    }
++    return BBinder::onTransact(code, data, reply, flags);
++}
++
++// ----------------------------------------------------------------------------
++
++ANDROID_SINGLETON_STATIC_INSTANCE(DumpTunnelHelper);
++
++DumpTunnelHelper::DumpTunnelHelper() :
++    mSoHandle(NULL),
++    mRegDumpPtr(NULL),
++    mUnregDumpPtr(NULL)
++{
++    typedef bool (*RegDumpPrototype)(const sp<IDumpTunnel>&, const String8&);
++    typedef bool (*UnregDumpPrototype)(const String8&);
++
++    // dlopen must set RTLD_LAZY flag because of performance issue
++    // need to use different path for 32/64 env
++#ifdef __LP64__
++    mSoHandle = dlopen("/system/lib64/libgui_ext.so", RTLD_LAZY);
++#else
++    mSoHandle = dlopen("/system/lib/libgui_ext.so", RTLD_LAZY);
++#endif
++    if (mSoHandle) {
++        mRegDumpPtr = reinterpret_cast<RegDumpPrototype>(dlsym(mSoHandle, "regDump"));
++        mUnregDumpPtr = reinterpret_cast<UnregDumpPrototype>(dlsym(mSoHandle, "unregDump"));
++        if (NULL == mRegDumpPtr) {
++            ALOGE("finding regDump() failed");
++        }
++        if (NULL == mUnregDumpPtr) {
++            ALOGE("finding unregDump() failed");
++        }
++    } else {
++        ALOGE("open libgui_ext failed");
++    }
++}
++
++DumpTunnelHelper::~DumpTunnelHelper() {
++    if(mSoHandle != NULL)
++        dlclose(mSoHandle);
++}
++
++bool DumpTunnelHelper::regDump(const sp<IDumpTunnel>& tunnel, const String8& key) {
++    bool result = false;
++    if (NULL == mRegDumpPtr) {
++        ALOGE("finding regDump() failed");
++        return result;
++    }
++    result = mRegDumpPtr(tunnel, key);
++
++    return result;
++}
++
++bool DumpTunnelHelper::unregDump(const String8& key) {
++    bool result = false;
++    if (NULL == mUnregDumpPtr) {
++        ALOGE("finding unregDump() failed");
++        return result;
++    }
++    result = mUnregDumpPtr(key);
++
++    return result;
++}
++
++};
+diff --git a/libs/ui/mediatek/RefBaseDump.cpp b/libs/ui/mediatek/RefBaseDump.cpp
+new file mode 100644
+index 000000000..333add489
+--- /dev/null
++++ b/libs/ui/mediatek/RefBaseDump.cpp
+@@ -0,0 +1,111 @@
++#define LOG_TAG "RefBaseDump"
++
++#if 0
++#define RBD_LOGV(x, ...) ALOGV(x, ##__VA_ARGS__)
++#define RBD_LOGD(x, ...) ALOGD(x, ##__VA_ARGS__)
++#define RBD_LOGI(x, ...) ALOGI(x, ##__VA_ARGS__)
++#define RBD_LOGW(x, ...) ALOGW(x, ##__VA_ARGS__)
++#define RBD_LOGE(x, ...) ALOGE(x, ##__VA_ARGS__)
++#else
++#define RBD_LOGV(x, ...)
++#define RBD_LOGD(x, ...)
++#define RBD_LOGI(x, ...)
++#define RBD_LOGW(x, ...)
++#define RBD_LOGE(x, ...)
++#endif
++
++#include <cutils/log.h>
++#include <cutils/process_name.h>
++#include <cutils/properties.h>
++#include <ui/mediatek/RefBaseDump.h>
++
++namespace android {
++
++//-------------------------------------------------------------------------
++// RefBaseDump
++//-------------------------------------------------------------------------
++
++RefBaseDump::RefBaseDump(RefBaseMonitor* pMonitor)
++    : mMonitor(pMonitor) {
++}
++
++RefBaseDump::~RefBaseDump() {
++}
++
++status_t RefBaseDump::kickDump(String8& result, const char* prefix) {
++    return mMonitor->dump(result);
++}
++
++//-------------------------------------------------------------------------
++// RefBaseMonitor
++//-------------------------------------------------------------------------
++
++ANDROID_SINGLETON_STATIC_INSTANCE(RefBaseMonitor)
++
++RefBaseMonitor::RefBaseMonitor() {
++    char value[PROPERTY_VALUE_MAX];
++    RBD_LOGI("RefBaseMonitor ctor - %p", this);
++    getProcessName();
++    property_get("debug.rb.dump", value, "Mary had a little lamb");
++    mIsTracking = (-1 != mProcessName.find(value));
++    mDump = new RefBaseDump(this);
++    DumpTunnelHelper::getInstance().regDump(mDump, String8::format("RB-%p", this));
++}
++
++RefBaseMonitor::~RefBaseMonitor() {
++    RBD_LOGI("RefBaseMonitor dtor - %p", this);
++    DumpTunnelHelper::getInstance().unregDump(String8::format("RB-%p", this));
++}
++
++status_t RefBaseMonitor::monitor(RefBase *pRb) {
++    Mutex::Autolock _l(mMutex);
++    if (mIsTracking) {
++        pRb->trackMe(true, false);
++    }
++    RbList.add(pRb, 0);
++    return NO_ERROR;
++}
++
++status_t RefBaseMonitor::unmonitor(RefBase *pRb) {
++    Mutex::Autolock _l(mMutex);
++    RbList.removeItem(pRb);
++    return NO_ERROR;
++}
++
++status_t RefBaseMonitor::dump(String8& result) {
++    int listSz;
++    RefBase *pRb;
++    Mutex::Autolock _l(mMutex);
++    RBD_LOGI("RefBaseMonitor Dump - %p", this);
++    listSz = RbList.size();
++    result.appendFormat("\t  [%8p]    RefCnt   %s", this, mProcessName.string());
++    result.append(mIsTracking ? " <- tracking\n" : "\n");
++    result.append("\t  -----------------------\n");
++
++    for (int i = 0; i < listSz; i++) {
++        pRb = RbList.keyAt(i);
++        if (mIsTracking) {
++            pRb->printRefs();
++        }
++        result.appendFormat("\t   %2d) %8p %4d\n", i, pRb, pRb->getStrongCount());
++    }
++    result.append("\t*****************************************************\n");
++    return NO_ERROR;
++}
++
++status_t RefBaseMonitor::getProcessName() {
++    int pid = getpid();
++    FILE *fp = fopen(String8::format("/proc/%d/cmdline", pid), "r");
++    if (NULL != fp) {
++        const size_t size = 64;
++        char proc_name[size];
++        fgets(proc_name, size, fp);
++        fclose(fp);
++        mProcessName = proc_name;
++    } else {
++        mProcessName = "unknownProcess";
++    }
++    return NO_ERROR;
++}
++
++}
+diff --git a/libs/ui/mediatek/test/Android.mk b/libs/ui/mediatek/test/Android.mk
+new file mode 100644
+index 000000000..82e7389eb
+--- /dev/null
++++ b/libs/ui/mediatek/test/Android.mk
+@@ -0,0 +1 @@
++#barrier
+diff --git a/libs/ui/mediatek/test/RefBaseDumpTunnel/Android.mk b/libs/ui/mediatek/test/RefBaseDumpTunnel/Android.mk
+new file mode 100644
+index 000000000..79edcbca2
+--- /dev/null
++++ b/libs/ui/mediatek/test/RefBaseDumpTunnel/Android.mk
+@@ -0,0 +1,15 @@
++LOCAL_PATH:= $(call my-dir)
++include $(CLEAR_VARS)
++
++LOCAL_SRC_FILES:= \
++    RefBaseDumpTunnel.cpp
++
++LOCAL_SHARED_LIBRARIES := \
++    libutils \
++    libui
++
++LOCAL_MODULE:= test-RefBaseDumpTunnel
++
++LOCAL_MODULE_TAGS := tests
++
++include $(BUILD_EXECUTABLE)
+diff --git a/libs/ui/mediatek/test/RefBaseDumpTunnel/RefBaseDumpTunnel.cpp b/libs/ui/mediatek/test/RefBaseDumpTunnel/RefBaseDumpTunnel.cpp
+new file mode 100644
+index 000000000..cdb2590c2
+--- /dev/null
++++ b/libs/ui/mediatek/test/RefBaseDumpTunnel/RefBaseDumpTunnel.cpp
+@@ -0,0 +1,103 @@
++#include <stdio.h>
++#include <time.h>
++#include <utils/StrongPointer.h>
++#include "RefBaseDumpTunnel.h"
++
++using namespace android;
++
++void RefBaseMonitorTest_Assignment(int testCnt, struct timespec *tsS, struct timespec *tsE ) {
++    sp<RefBaseTest> sp1 = new RefBaseTest();
++    sp<RefBaseTest> sp2;
++    //printf("[1]");
++    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tsS);
++    //printf("with RefBaseTracking....S:%d(ns)\n",tsS.tv_nsec);
++    for (int i = 0; i < testCnt; i++) {
++         sp2 = sp1;
++    }
++    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tsE);
++}
++
++void RefBaseMonitorTest_CtorDtor(int testCnt, struct timespec *tsS, struct timespec *tsE ) {
++    RefBaseTest *rbtmp;
++    //printf("[2]");
++    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tsS);
++    //printf("with RefBaseTracking....S:%d(ns)\n",tsS.tv_nsec);
++    for (int i = 0; i < testCnt; i++) {
++        rbtmp = new RefBaseTest();
++        delete rbtmp;
++    }
++    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tsE);
++    //printf("with RefBaseTracking....E:%d(ns)\n",tsE.tv_nsec);
++}
++
++void RefBaseMonitorTest_CtorDtorAssgnment(int testCnt, struct timespec *tsS, struct timespec *tsE ) {
++    sp<RefBaseTest> sp1 = new RefBaseTest();
++    //printf("[3]");
++    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tsS);
++    //printf("with RefBaseTracking....S:%d(ns)\n",tsS.tv_nsec);
++    for (int i = 0; i < testCnt; i++) {
++        sp1 = new RefBaseTest();
++    }
++    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tsE);
++    //printf("with RefBaseTracking....E:%d(ns)\n",tsE.tv_nsec);
++}
++
++void RefBaseMonitorSubTest (int testRound, int testCntPerRound, void (*testFunc)(int, struct timespec *, struct timespec *)) {
++    struct timespec tsS;
++    struct timespec tsE;
++    int tmp;
++    int totalCnt;
++    int timeWithTracking = 0;
++
++    for(int j = 0; j < testRound; j++) {
++        //printf("Rnd: %d",j);
++        (*testFunc)(testCntPerRound, &tsS, &tsE);
++
++        tmp = tsE.tv_nsec - tsS.tv_nsec;
++        if (tmp < 0) {
++            tmp = 1000000000L + tsE.tv_nsec - tsS.tv_nsec;
++        }
++        timeWithTracking += tmp;
++        //printf("with RefBaseTracking....D:%d(ns)\n",tmp);
++    }
++    totalCnt = testRound * testCntPerRound;
++    printf("%12d(ns) = TotalTime: %12d(ns) / TestCnt: %d \n", timeWithTracking / totalCnt, timeWithTracking, totalCnt);
++
++}
++
++void RefBaseMonitorTest(int recCount, int testRound, int testCntPerRound) {
++    int tmp = recCount;
++    if (recCount == 0) {
++        RefBaseMonitorSubTest(testRound, testCntPerRound, RefBaseMonitorTest_Assignment);
++        RefBaseMonitorSubTest(testRound, testCntPerRound, RefBaseMonitorTest_CtorDtor);
++        RefBaseMonitorSubTest(testRound, testCntPerRound, RefBaseMonitorTest_CtorDtorAssgnment);
++    } else {
++        recCount--;
++        RefBaseMonitorTest(recCount, testRound, testCntPerRound);
++    }
++    printf("(stack:%d)", tmp);
++}
++
++int main(int argc, char** argv) {
++    int recLv;
++    int testRound;
++    int testCntPerRound;
++    int recCntTime;
++
++    if (argc == 5) {
++        sscanf(argv[1], "%d", &recLv);
++        sscanf(argv[2], "%d", &recCntTime);
++        sscanf(argv[3], "%d", &testRound);
++        sscanf(argv[4], "%d", &testCntPerRound);
++        if ((recLv >= 0) && (recCntTime > 0) && (testRound > 0) && (testCntPerRound > 0)) {
++            for (int i = 0; i < recCntTime; i++) {
++                printf("\nrec[ n + %d ]\n", i + recLv);
++                RefBaseMonitorTest(i + recLv, testRound, testCntPerRound);
++            }
++            printf("\n\n");
++            return 0;
++        }
++    }
++    printf("test-RefBaseDumpTunnel recLv recTimes testRnd testCntPerRnd\n");
++    return 0;
++}
+\ No newline at end of file
+diff --git a/libs/ui/mediatek/test/RefBaseDumpTunnel/RefBaseDumpTunnel.h b/libs/ui/mediatek/test/RefBaseDumpTunnel/RefBaseDumpTunnel.h
+new file mode 100644
+index 000000000..5ba0025ef
+--- /dev/null
++++ b/libs/ui/mediatek/test/RefBaseDumpTunnel/RefBaseDumpTunnel.h
+@@ -0,0 +1,17 @@
++#include <utils/RefBase.h>
++#include <ui/mediatek/RefBaseDumpTunnel.h>
++
++namespace android
++{
++
++class RefBaseTest: public RefBase{
++    public:
++        RefBaseTest(){
++            RefBaseMonitor::getInstance().monitor(this);
++        }
++        ~RefBaseTest(){
++            RefBaseMonitor::getInstance().unmonitor(this);
++        }
++};
++
++};
+diff --git a/services/sensorservice/SensorService.cpp b/services/sensorservice/SensorService.cpp
+index d8e08775a..99da2c497 100644
+--- a/services/sensorservice/SensorService.cpp
++++ b/services/sensorservice/SensorService.cpp
+@@ -191,10 +191,9 @@ void SensorService::onFirstRef() {
+                 // available in the HAL
+                 bool needRotationVector =
+                         (virtualSensorsNeeds & (1<<SENSOR_TYPE_ROTATION_VECTOR)) != 0;
+-                bool needOrientation = orientationIndex == -1;
+ 
+                 registerSensor(new RotationVectorSensor(), !needRotationVector, true);
+-                registerSensor(new OrientationSensor(), !needOrientation, true);
++                registerSensor(new OrientationSensor(), !needRotationVector, true);
+ 
+                 bool needLinearAcceleration =
+                         (virtualSensorsNeeds & (1<<SENSOR_TYPE_LINEAR_ACCELERATION)) != 0;
+diff --git a/services/surfaceflinger/DisplayUtils.cpp b/services/surfaceflinger/DisplayUtils.cpp
+index 09cdd1533..c6f4e4f02 100644
+--- a/services/surfaceflinger/DisplayUtils.cpp
++++ b/services/surfaceflinger/DisplayUtils.cpp
+@@ -194,6 +194,11 @@ bool DisplayUtils::canAllocateHwcDisplayIdForVDS(int usage) {
+     property_get("debug.vds.allow_hwc", value, "0");
+     int allowHwcForVDS = atoi(value);
+ 
++#ifdef MTK_HARDWARE
++    // xen0n: seems necessary for at least Meizu MX4's hwcomposer to not crash
++    flag_mask = 0;
++#endif
++
+ #ifdef QTI_BSP
+     // Do not allow hardware acceleration
+     flag_mask = GRALLOC_USAGE_PRIVATE_WFD;
+diff --git a/services/surfaceflinger/DisplayUtils.cpp.orig b/services/surfaceflinger/DisplayUtils.cpp.orig
+new file mode 100644
+index 000000000..09cdd1533
+--- /dev/null
++++ b/services/surfaceflinger/DisplayUtils.cpp.orig
+@@ -0,0 +1,243 @@
++/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ *     * Redistributions of source code must retain the above copyright
++ *       notice, this list of conditions and the following disclaimer.
++ *     * Redistributions in binary form must reproduce the above
++ *       copyright notice, this list of conditions and the following
++ *       disclaimer in the documentation and/or other materials provided
++ *       with the distribution.
++ *     * Neither the name of The Linux Foundation nor the names of its
++ *       contributors may be used to endorse or promote products derived
++ *       from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
++ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
++ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
++ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
++ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
++ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <stdlib.h>
++#include <stdint.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#include <cutils/properties.h>
++
++#include <utils/Errors.h>
++#include <utils/Log.h>
++
++#include <gui/Surface.h>
++#include <ui/GraphicBuffer.h>
++
++#include "RenderEngine/RenderEngine.h"
++#include "DisplayHardware/FramebufferSurface.h"
++#include "DisplayUtils.h"
++#if QTI_BSP
++#include <ExSurfaceFlinger/ExSurfaceFlinger.h>
++#include <ExSurfaceFlinger/ExLayer.h>
++#include <ExSurfaceFlinger/ExHWComposer.h>
++#include <ExSurfaceFlinger/ExVirtualDisplaySurface.h>
++#include <dlfcn.h>
++#include <gralloc_priv.h>
++#endif
++
++namespace android {
++
++DisplayUtils* DisplayUtils::sDisplayUtils = NULL;
++bool DisplayUtils::sUseExtendedImpls = false;
++
++DisplayUtils::DisplayUtils() {
++#ifdef QTI_BSP
++    sUseExtendedImpls = true;
++    hasWbNode();
++#endif
++}
++
++DisplayUtils* DisplayUtils::getInstance() {
++    if(sDisplayUtils == NULL) {
++        sDisplayUtils = new DisplayUtils();
++    }
++    return sDisplayUtils;
++}
++
++SurfaceFlinger* DisplayUtils::getSFInstance() {
++#ifdef QTI_BSP
++    if(sUseExtendedImpls) {
++        return new ExSurfaceFlinger();
++    }
++#endif
++    return new SurfaceFlinger();
++}
++
++Layer* DisplayUtils::getLayerInstance(SurfaceFlinger* flinger,
++                            const sp<Client>& client, const String8& name,
++                            uint32_t w, uint32_t h, uint32_t flags) {
++#ifdef QTI_BSP
++    if(sUseExtendedImpls) {
++        return new ExLayer(flinger, client, name, w, h, flags);
++    }
++#endif
++    return new Layer(flinger, client, name, w, h, flags);
++}
++
++#ifndef USE_HWC2
++HWComposer* DisplayUtils::getHWCInstance(
++                        const sp<SurfaceFlinger>& flinger,
++                        HWComposer::EventHandler& handler) {
++#ifdef QTI_BSP
++    if(sUseExtendedImpls) {
++        return new ExHWComposer(flinger, handler);
++    }
++#endif
++    return new HWComposer(flinger,handler);
++}
++#else
++HWComposer* DisplayUtils::getHWCInstance(
++                        const sp<SurfaceFlinger>& flinger) {
++#ifdef QTI_BSP
++    if(sUseExtendedImpls) {
++        return new ExHWComposer(flinger);
++    }
++#endif
++    return new HWComposer(flinger);
++}
++#endif
++
++void DisplayUtils::initVDSInstance(HWComposer* hwc, int32_t hwcDisplayId,
++        sp<IGraphicBufferProducer> currentStateSurface, sp<DisplaySurface> &dispSurface,
++        sp<IGraphicBufferProducer> &producer, sp<IGraphicBufferProducer> bqProducer,
++        sp<IGraphicBufferConsumer> bqConsumer, String8 currentStateDisplayName,
++        bool currentStateIsSecure, int currentStateType)
++{
++#ifdef QTI_BSP
++    if(sUseExtendedImpls) {
++        if(hwc->isVDSEnabled()) {
++            VirtualDisplaySurface* vds = new ExVirtualDisplaySurface(*hwc, hwcDisplayId,
++                    currentStateSurface, bqProducer, bqConsumer, currentStateDisplayName,
++                    currentStateIsSecure);
++            dispSurface = vds;
++            producer = vds;
++        } else if(!createV4L2BasedVirtualDisplay(hwc, hwcDisplayId, dispSurface, producer,
++                          currentStateSurface, bqProducer, bqConsumer, currentStateType)) {
++            VirtualDisplaySurface* vds = new VirtualDisplaySurface(*hwc, hwcDisplayId,
++                    currentStateSurface, bqProducer, bqConsumer, currentStateDisplayName);
++            dispSurface = vds;
++            producer = vds;
++        }
++    } else {
++#endif
++        (void)currentStateIsSecure;
++        (void)currentStateType;
++        VirtualDisplaySurface* vds = new VirtualDisplaySurface(*hwc, hwcDisplayId,
++                currentStateSurface, bqProducer, bqConsumer, currentStateDisplayName);
++        dispSurface = vds;
++        producer = vds;
++#ifdef QTI_BSP
++    }
++#endif
++}
++
++bool DisplayUtils::createV4L2BasedVirtualDisplay(HWComposer* hwc, int32_t &hwcDisplayId,
++                   sp<DisplaySurface> &dispSurface, sp<IGraphicBufferProducer> &producer,
++                   sp<IGraphicBufferProducer> currentStateSurface,
++                   sp<IGraphicBufferProducer> bqProducer, sp<IGraphicBufferConsumer> bqConsumer,
++                   int currentStateType) {
++    char value[PROPERTY_VALUE_MAX];
++    property_get("persist.sys.wfd.virtual", value, "0");
++    int wfdVirtual = atoi(value);
++    if(wfdVirtual && hwcDisplayId > 0) {
++        //Read virtual display properties and create a
++        //rendering surface for it inorder to be handled
++        //by hwc.
++
++        sp<ANativeWindow> mNativeWindow = new Surface(currentStateSurface);
++        ANativeWindow* const window = mNativeWindow.get();
++
++        int format;
++        window->query(window, NATIVE_WINDOW_FORMAT, &format);
++        EGLSurface surface;
++        EGLint w, h;
++        EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
++        // In M AOSP getEGLConfig() always returns EGL_NO_CONFIG as
++        // EGL_ANDROIDX_no_config_context active now.
++        EGLConfig config = RenderEngine::chooseEglConfig(display, format);
++
++        surface = eglCreateWindowSurface(display, config, window, NULL);
++        eglQuerySurface(display, surface, EGL_WIDTH, &w);
++        eglQuerySurface(display, surface, EGL_HEIGHT, &h);
++#ifndef USE_HWC2
++        if(hwc->setVirtualDisplayProperties(hwcDisplayId, w, h, format) != NO_ERROR)
++            return false;
++#endif
++
++        dispSurface = new FramebufferSurface(*hwc, currentStateType, bqConsumer);
++        producer = bqProducer;
++        return true;
++    }
++    return false;
++}
++
++bool DisplayUtils::canAllocateHwcDisplayIdForVDS(int usage) {
++    // on AOSP builds with QTI_BSP disabled, we should allocate hwc display id for virtual display
++    int flag_mask = 0xffffffff;
++    char value[PROPERTY_VALUE_MAX];
++    property_get("debug.vds.allow_hwc", value, "0");
++    int allowHwcForVDS = atoi(value);
++
++#ifdef QTI_BSP
++    // Do not allow hardware acceleration
++    flag_mask = GRALLOC_USAGE_PRIVATE_WFD;
++#endif
++
++    return ((mHasWbNode) && (allowHwcForVDS || (usage & flag_mask)));
++}
++
++int DisplayUtils::getNumFbNodes() {
++    int i = 0;
++    while (hasFbNode(i)) i++;
++    return i;
++}
++
++bool DisplayUtils::hasFbNode(int index) {
++    char filename[kMaxStringLength];
++    snprintf(filename, kMaxStringLength, "/sys/class/graphics/fb%d", index);
++    if (access(filename, F_OK) < 0) {
++        return false;
++    }
++    return true;
++}
++
++bool DisplayUtils::hasWbNode() {
++    int fbNum = getNumFbNodes();
++    char msmFbType [kMaxStringLength];
++    char fbType [kMaxStringLength];
++    FILE *displayPanelFP = NULL;
++    mHasWbNode = false;
++
++    for (int i = 0; i < fbNum; i++) {
++        snprintf (msmFbType,MAX_FRAME_BUFFER_NAME_SIZE, "/sys/class/graphics/fb%d/msm_fb_type", i);
++        displayPanelFP = fopen(msmFbType, "r");
++        if(displayPanelFP) {
++            fread(fbType, sizeof(char), MAX_FRAME_BUFFER_NAME_SIZE, displayPanelFP);
++            fclose(displayPanelFP);
++            if(strncmp(fbType, "writeback panel", strlen("writeback panel")) == 0) {
++                mHasWbNode = true;
++                break;
++            }
++        }
++    }
++    return mHasWbNode;
++}
++
++}; // namespace android
++
