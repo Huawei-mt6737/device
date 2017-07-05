@@ -1,7 +1,7 @@
 Device Tree for Highscreen Razar | Razar Pro
 ===========================================
 
-The Highscreen Razar | Razar Pro (codenamed _"razar"_) is a mid-range smartphone from Highscreen.
+The Highscreen Razar | Razar Pro (codenamed _"rlk6737t"_) is a mid-range smartphone from Highscreen.
 It was released in December,2016.
 
 Basic   | Spec Sheet
