@@ -1,10 +1,42 @@
-From d9e5171e40c7f74b9f4fa0c6d081c73f722b95ca Mon Sep 17 00:00:00 2001
+From f0f2ca59f333ee11e0acf916d78eb3ad46a3d6ed Mon Sep 17 00:00:00 2001
 From: mdeejay <mdjrussia@gmail.com>
-Date: Mon, 3 Jul 2017 01:11:36 +0700
+Date: Thu, 6 Jul 2017 01:37:56 +0700
 Subject: changes for MTK
 
-Change-Id: I7f532c6df0453f25e7eae068c88b292778397c6d
+Change-Id: Idd9054e896fc2763188f34b26e2c63b2a55bac20
 
+diff --git a/include/batteryservice/BatteryService.h b/include/batteryservice/BatteryService.h
+index 50a01ba6d..884d6eef6 100644
+--- a/include/batteryservice/BatteryService.h
++++ b/include/batteryservice/BatteryService.h
+@@ -1,6 +1,5 @@
+ /*
+  * Copyright (C) 2013 The Android Open Source Project
+- * Copyright (C) 2015 The CyanogenMod Project
+  *
+  * Licensed under the Apache License, Version 2.0 (the "License");
+  * you may not use this file except in compliance with the License.
+@@ -32,6 +31,7 @@ enum {
+     BATTERY_STATUS_DISCHARGING = 3, // equals BatteryManager.BATTERY_STATUS_DISCHARGING constant
+     BATTERY_STATUS_NOT_CHARGING = 4, // equals BatteryManager.BATTERY_STATUS_NOT_CHARGING constant
+     BATTERY_STATUS_FULL = 5, // equals BatteryManager.BATTERY_STATUS_FULL constant
++    BATTERY_STATUS_CMD_DISCHARGING = 6, // equals BatteryManager.BATTERY_STATUS_CMD_DISCHARGING constant
+ };
+ 
+ // must be kept in sync with definitions in BatteryManager.java
+@@ -69,7 +69,12 @@ struct BatteryProperties {
+     int batteryCurrent;
+     int batteryCycleCount;
+     int batteryFullCharge;
++    int batteryStatus_smb;
++    bool batteryPresent_smb;
++    int batteryLevel_smb;
++    int batteryCurrentNow;
+     int batteryChargeCounter;
++    int adjustPower;
+     String8 batteryTechnology;
+ 
+     bool dockBatterySupported;
 diff --git a/include/gui/SensorManager.h b/include/gui/SensorManager.h
 index 6c6230f9e..5306b94ab 100644
 --- a/include/gui/SensorManager.h
@@ -64,155 +96,6 @@ index 48a7aa3c5..0e70d24f0 100644
  };
  
  }; // namespace android
-diff --git a/include/ui/Fence.h.orig b/include/ui/Fence.h.orig
-new file mode 100644
-index 000000000..48a7aa3c5
---- /dev/null
-+++ b/include/ui/Fence.h.orig
-@@ -0,0 +1,143 @@
-+/*
-+ * Copyright (C) 2012 The Android Open Source Project
-+ *
-+ * Licensed under the Apache License, Version 2.0 (the "License");
-+ * you may not use this file except in compliance with the License.
-+ * You may obtain a copy of the License at
-+ *
-+ *      http://www.apache.org/licenses/LICENSE-2.0
-+ *
-+ * Unless required by applicable law or agreed to in writing, software
-+ * distributed under the License is distributed on an "AS IS" BASIS,
-+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+ * See the License for the specific language governing permissions and
-+ * limitations under the License.
-+ */
-+
-+#ifndef ANDROID_FENCE_H
-+#define ANDROID_FENCE_H
-+
-+#include <stdint.h>
-+#include <sys/types.h>
-+
-+#include <ui/ANativeObjectBase.h>
-+#include <ui/PixelFormat.h>
-+#include <ui/Rect.h>
-+#include <utils/Flattenable.h>
-+#include <utils/String8.h>
-+#include <utils/Timers.h>
-+
-+#include <experimental/optional>
-+
-+struct ANativeWindowBuffer;
-+
-+namespace android {
-+
-+// ===========================================================================
-+// Fence
-+// ===========================================================================
-+
-+class Fence
-+    : public LightRefBase<Fence>, public Flattenable<Fence>
-+{
-+public:
-+    static const sp<Fence> NO_FENCE;
-+
-+    // TIMEOUT_NEVER may be passed to the wait method to indicate that it
-+    // should wait indefinitely for the fence to signal.
-+    enum { TIMEOUT_NEVER = -1 };
-+
-+    // Construct a new Fence object with an invalid file descriptor.  This
-+    // should be done when the Fence object will be set up by unflattening
-+    // serialized data.
-+    Fence();
-+
-+    // Construct a new Fence object to manage a given fence file descriptor.
-+    // When the new Fence object is destructed the file descriptor will be
-+    // closed.
-+    Fence(int fenceFd);
-+
-+    // Check whether the Fence has an open fence file descriptor. Most Fence
-+    // methods treat an invalid file descriptor just like a valid fence that
-+    // is already signalled, so using this is usually not necessary.
-+    bool isValid() const { return mFenceFd != -1; }
-+
-+    // wait waits for up to timeout milliseconds for the fence to signal.  If
-+    // the fence signals then NO_ERROR is returned. If the timeout expires
-+    // before the fence signals then -ETIME is returned.  A timeout of
-+    // TIMEOUT_NEVER may be used to indicate that the call should wait
-+    // indefinitely for the fence to signal.
-+    status_t wait(int timeout);
-+
-+    // waitForever is a convenience function for waiting forever for a fence to
-+    // signal (just like wait(TIMEOUT_NEVER)), but issuing an error to the
-+    // system log and fence state to the kernel log if the wait lasts longer
-+    // than a warning timeout.
-+    // The logname argument should be a string identifying
-+    // the caller and will be included in the log message.
-+    status_t waitForever(const char* logname);
-+
-+    // merge combines two Fence objects, creating a new Fence object that
-+    // becomes signaled when both f1 and f2 are signaled (even if f1 or f2 is
-+    // destroyed before it becomes signaled).  The name argument specifies the
-+    // human-readable name to associated with the new Fence object.
-+    static sp<Fence> merge(const char* name, const sp<Fence>& f1,
-+            const sp<Fence>& f2);
-+
-+    static sp<Fence> merge(const String8& name, const sp<Fence>& f1,
-+            const sp<Fence>& f2);
-+
-+    // Return a duplicate of the fence file descriptor. The caller is
-+    // responsible for closing the returned file descriptor. On error, -1 will
-+    // be returned and errno will indicate the problem.
-+    int dup() const;
-+
-+    // getSignalTime returns the system monotonic clock time at which the
-+    // fence transitioned to the signaled state.  If the fence is not signaled
-+    // then INT64_MAX is returned.  If the fence is invalid or if an error
-+    // occurs then -1 is returned.
-+    nsecs_t getSignalTime() const;
-+
-+#if __cplusplus > 201103L
-+    // hasSignaled returns whether the fence has signaled yet. Prefer this to
-+    // getSignalTime() or wait() if all you care about is whether the fence has
-+    // signaled. Returns an optional bool, which will have a value if there was
-+    // no error.
-+    inline std::experimental::optional<bool> hasSignaled() {
-+        // The sync_wait call underlying wait() has been measured to be
-+        // significantly faster than the sync_fence_info call underlying
-+        // getSignalTime(), which might otherwise appear to be the more obvious
-+        // way to check whether a fence has signaled.
-+        switch (wait(0)) {
-+            case NO_ERROR:
-+                return true;
-+            case -ETIME:
-+                return false;
-+            default:
-+                return {};
-+        }
-+    }
-+#endif
-+
-+    // Flattenable interface
-+    size_t getFlattenedSize() const;
-+    size_t getFdCount() const;
-+    status_t flatten(void*& buffer, size_t& size, int*& fds, size_t& count) const;
-+    status_t unflatten(void const*& buffer, size_t& size, int const*& fds, size_t& count);
-+
-+private:
-+    // Only allow instantiation using ref counting.
-+    friend class LightRefBase<Fence>;
-+    ~Fence();
-+
-+    // Disallow copying
-+    Fence(const Fence& rhs);
-+    Fence& operator = (const Fence& rhs);
-+    const Fence& operator = (const Fence& rhs) const;
-+
-+    int mFenceFd;
-+};
-+
-+}; // namespace android
-+
-+#endif // ANDROID_FENCE_H
 diff --git a/include/ui/GraphicBuffer.h b/include/ui/GraphicBuffer.h
 index 3e127a12a..ebaf5810c 100644
 --- a/include/ui/GraphicBuffer.h
@@ -436,91 +319,6 @@ index 2b16365c3..7644d0dd9 100644
  ifneq ($(BOARD_FRAMEBUFFER_FORCE_FORMAT),)
  LOCAL_CFLAGS += -DFRAMEBUFFER_FORCE_FORMAT=$(BOARD_FRAMEBUFFER_FORCE_FORMAT)
  endif
-diff --git a/libs/ui/Android.mk.orig b/libs/ui/Android.mk.orig
-new file mode 100644
-index 000000000..2e7bc1aee
---- /dev/null
-+++ b/libs/ui/Android.mk.orig
-@@ -0,0 +1,79 @@
-+# Copyright (C) 2010 The Android Open Source Project
-+#
-+# Licensed under the Apache License, Version 2.0 (the "License");
-+# you may not use this file except in compliance with the License.
-+# You may obtain a copy of the License at
-+#
-+#      http://www.apache.org/licenses/LICENSE-2.0
-+#
-+# Unless required by applicable law or agreed to in writing, software
-+# distributed under the License is distributed on an "AS IS" BASIS,
-+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+# See the License for the specific language governing permissions and
-+# limitations under the License.
-+
-+LOCAL_PATH := $(call my-dir)
-+include $(CLEAR_VARS)
-+
-+LOCAL_CLANG := true
-+LOCAL_CPPFLAGS := -std=c++1y -Weverything
-+# LOCAL_SANITIZE := integer
-+
-+# The static constructors and destructors in this library have not been noted to
-+# introduce significant overheads
-+LOCAL_CPPFLAGS += -Wno-exit-time-destructors
-+LOCAL_CPPFLAGS += -Wno-global-constructors
-+
-+# We only care about compiling as C++14
-+LOCAL_CPPFLAGS += -Wno-c++98-compat-pedantic
-+
-+# We use four-character constants for the GraphicBuffer header, and don't care
-+# that they're non-portable as long as they're consistent within one execution
-+LOCAL_CPPFLAGS += -Wno-four-char-constants
-+
-+# Don't warn about struct padding
-+LOCAL_CPPFLAGS += -Wno-padded
-+
-+LOCAL_SRC_FILES := \
-+	Fence.cpp \
-+	FrameStats.cpp \
-+	Gralloc1.cpp \
-+	Gralloc1On0Adapter.cpp \
-+	GraphicBuffer.cpp \
-+	GraphicBufferAllocator.cpp \
-+	GraphicBufferMapper.cpp \
-+	HdrCapabilities.cpp \
-+	PixelFormat.cpp \
-+	Rect.cpp \
-+	Region.cpp \
-+	UiConfig.cpp
-+
-+LOCAL_SHARED_LIBRARIES := \
-+	libbinder \
-+	libcutils \
-+	libhardware \
-+	libsync \
-+	libutils \
-+	liblog
-+
-+ifneq ($(BOARD_FRAMEBUFFER_FORCE_FORMAT),)
-+LOCAL_CFLAGS += -DFRAMEBUFFER_FORCE_FORMAT=$(BOARD_FRAMEBUFFER_FORCE_FORMAT)
-+endif
-+
-+ifeq ($(BOARD_EGL_NEEDS_HANDLE_VALUE),true)
-+LOCAL_CFLAGS += -DEGL_NEEDS_HANDLE
-+endif
-+
-+LOCAL_MODULE := libui
-+
-+include $(BUILD_SHARED_LIBRARY)
-+
-+
-+# Include subdirectory makefiles
-+# ============================================================
-+
-+# If we're building with ONE_SHOT_MAKEFILE (mm, mmm), then what the framework
-+# team really wants is to build the stuff defined by this makefile.
-+ifeq (,$(ONE_SHOT_MAKEFILE))
-+include $(call first-makefiles-under,$(LOCAL_PATH))
-+endif
 diff --git a/libs/ui/GraphicBuffer.cpp b/libs/ui/GraphicBuffer.cpp
 index df31d5fd1..b9766b9d3 100644
 --- a/libs/ui/GraphicBuffer.cpp
@@ -1044,6 +842,43 @@ index 000000000..5ba0025ef
 +};
 +
 +};
+diff --git a/services/batteryservice/BatteryProperties.cpp b/services/batteryservice/BatteryProperties.cpp
+index 98269a373..44a83d45b 100644
+--- a/services/batteryservice/BatteryProperties.cpp
++++ b/services/batteryservice/BatteryProperties.cpp
+@@ -1,6 +1,5 @@
+ /*
+  * Copyright (C) 2013 The Android Open Source Project
+- * Copyright (C) 2015 The CyanogenMod Project
+  *
+  * Licensed under the Apache License, Version 2.0 (the "License");
+  * you may not use this file except in compliance with the License.
+@@ -42,7 +41,12 @@ status_t BatteryProperties::readFromParcel(Parcel* p) {
+     batteryLevel = p->readInt32();
+     batteryVoltage = p->readInt32();
+     batteryTemperature = p->readInt32();
++    batteryStatus_smb = p->readInt32();
++    batteryPresent_smb = p->readInt32() == 1 ? true : false;
++    batteryLevel_smb = p->readInt32();
++    batteryCurrentNow = p->readInt32();
+     batteryChargeCounter = p->readInt32();
++    adjustPower = p->readInt32();
+     batteryTechnology = String8((p->readString16()).string());
+ 
+     dockBatterySupported = p->readInt32() == 1 ? true : false;
+@@ -80,7 +84,12 @@ status_t BatteryProperties::writeToParcel(Parcel* p) const {
+     p->writeInt32(batteryLevel);
+     p->writeInt32(batteryVoltage);
+     p->writeInt32(batteryTemperature);
++    p->writeInt32(batteryStatus_smb);
++    p->writeInt32(batteryPresent_smb ? 1 : 0);
++    p->writeInt32(batteryLevel_smb);
++    p->writeInt32(batteryCurrentNow);
+     p->writeInt32(batteryChargeCounter);
++    p->writeInt32(adjustPower);
+     p->writeString16(String16(batteryTechnology));
+ 
+     p->writeInt32(dockBatterySupported ? 1 : 0);
 diff --git a/services/sensorservice/SensorService.cpp b/services/sensorservice/SensorService.cpp
 index d8e08775a..99da2c497 100644
 --- a/services/sensorservice/SensorService.cpp
@@ -1076,252 +911,3 @@ index 09cdd1533..c6f4e4f02 100644
  #ifdef QTI_BSP
      // Do not allow hardware acceleration
      flag_mask = GRALLOC_USAGE_PRIVATE_WFD;
-diff --git a/services/surfaceflinger/DisplayUtils.cpp.orig b/services/surfaceflinger/DisplayUtils.cpp.orig
-new file mode 100644
-index 000000000..09cdd1533
---- /dev/null
-+++ b/services/surfaceflinger/DisplayUtils.cpp.orig
-@@ -0,0 +1,243 @@
-+/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions are
-+ * met:
-+ *     * Redistributions of source code must retain the above copyright
-+ *       notice, this list of conditions and the following disclaimer.
-+ *     * Redistributions in binary form must reproduce the above
-+ *       copyright notice, this list of conditions and the following
-+ *       disclaimer in the documentation and/or other materials provided
-+ *       with the distribution.
-+ *     * Neither the name of The Linux Foundation nor the names of its
-+ *       contributors may be used to endorse or promote products derived
-+ *       from this software without specific prior written permission.
-+ *
-+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
-+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
-+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
-+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#include <stdlib.h>
-+#include <stdint.h>
-+#include <sys/types.h>
-+#include <unistd.h>
-+
-+#include <cutils/properties.h>
-+
-+#include <utils/Errors.h>
-+#include <utils/Log.h>
-+
-+#include <gui/Surface.h>
-+#include <ui/GraphicBuffer.h>
-+
-+#include "RenderEngine/RenderEngine.h"
-+#include "DisplayHardware/FramebufferSurface.h"
-+#include "DisplayUtils.h"
-+#if QTI_BSP
-+#include <ExSurfaceFlinger/ExSurfaceFlinger.h>
-+#include <ExSurfaceFlinger/ExLayer.h>
-+#include <ExSurfaceFlinger/ExHWComposer.h>
-+#include <ExSurfaceFlinger/ExVirtualDisplaySurface.h>
-+#include <dlfcn.h>
-+#include <gralloc_priv.h>
-+#endif
-+
-+namespace android {
-+
-+DisplayUtils* DisplayUtils::sDisplayUtils = NULL;
-+bool DisplayUtils::sUseExtendedImpls = false;
-+
-+DisplayUtils::DisplayUtils() {
-+#ifdef QTI_BSP
-+    sUseExtendedImpls = true;
-+    hasWbNode();
-+#endif
-+}
-+
-+DisplayUtils* DisplayUtils::getInstance() {
-+    if(sDisplayUtils == NULL) {
-+        sDisplayUtils = new DisplayUtils();
-+    }
-+    return sDisplayUtils;
-+}
-+
-+SurfaceFlinger* DisplayUtils::getSFInstance() {
-+#ifdef QTI_BSP
-+    if(sUseExtendedImpls) {
-+        return new ExSurfaceFlinger();
-+    }
-+#endif
-+    return new SurfaceFlinger();
-+}
-+
-+Layer* DisplayUtils::getLayerInstance(SurfaceFlinger* flinger,
-+                            const sp<Client>& client, const String8& name,
-+                            uint32_t w, uint32_t h, uint32_t flags) {
-+#ifdef QTI_BSP
-+    if(sUseExtendedImpls) {
-+        return new ExLayer(flinger, client, name, w, h, flags);
-+    }
-+#endif
-+    return new Layer(flinger, client, name, w, h, flags);
-+}
-+
-+#ifndef USE_HWC2
-+HWComposer* DisplayUtils::getHWCInstance(
-+                        const sp<SurfaceFlinger>& flinger,
-+                        HWComposer::EventHandler& handler) {
-+#ifdef QTI_BSP
-+    if(sUseExtendedImpls) {
-+        return new ExHWComposer(flinger, handler);
-+    }
-+#endif
-+    return new HWComposer(flinger,handler);
-+}
-+#else
-+HWComposer* DisplayUtils::getHWCInstance(
-+                        const sp<SurfaceFlinger>& flinger) {
-+#ifdef QTI_BSP
-+    if(sUseExtendedImpls) {
-+        return new ExHWComposer(flinger);
-+    }
-+#endif
-+    return new HWComposer(flinger);
-+}
-+#endif
-+
-+void DisplayUtils::initVDSInstance(HWComposer* hwc, int32_t hwcDisplayId,
-+        sp<IGraphicBufferProducer> currentStateSurface, sp<DisplaySurface> &dispSurface,
-+        sp<IGraphicBufferProducer> &producer, sp<IGraphicBufferProducer> bqProducer,
-+        sp<IGraphicBufferConsumer> bqConsumer, String8 currentStateDisplayName,
-+        bool currentStateIsSecure, int currentStateType)
-+{
-+#ifdef QTI_BSP
-+    if(sUseExtendedImpls) {
-+        if(hwc->isVDSEnabled()) {
-+            VirtualDisplaySurface* vds = new ExVirtualDisplaySurface(*hwc, hwcDisplayId,
-+                    currentStateSurface, bqProducer, bqConsumer, currentStateDisplayName,
-+                    currentStateIsSecure);
-+            dispSurface = vds;
-+            producer = vds;
-+        } else if(!createV4L2BasedVirtualDisplay(hwc, hwcDisplayId, dispSurface, producer,
-+                          currentStateSurface, bqProducer, bqConsumer, currentStateType)) {
-+            VirtualDisplaySurface* vds = new VirtualDisplaySurface(*hwc, hwcDisplayId,
-+                    currentStateSurface, bqProducer, bqConsumer, currentStateDisplayName);
-+            dispSurface = vds;
-+            producer = vds;
-+        }
-+    } else {
-+#endif
-+        (void)currentStateIsSecure;
-+        (void)currentStateType;
-+        VirtualDisplaySurface* vds = new VirtualDisplaySurface(*hwc, hwcDisplayId,
-+                currentStateSurface, bqProducer, bqConsumer, currentStateDisplayName);
-+        dispSurface = vds;
-+        producer = vds;
-+#ifdef QTI_BSP
-+    }
-+#endif
-+}
-+
-+bool DisplayUtils::createV4L2BasedVirtualDisplay(HWComposer* hwc, int32_t &hwcDisplayId,
-+                   sp<DisplaySurface> &dispSurface, sp<IGraphicBufferProducer> &producer,
-+                   sp<IGraphicBufferProducer> currentStateSurface,
-+                   sp<IGraphicBufferProducer> bqProducer, sp<IGraphicBufferConsumer> bqConsumer,
-+                   int currentStateType) {
-+    char value[PROPERTY_VALUE_MAX];
-+    property_get("persist.sys.wfd.virtual", value, "0");
-+    int wfdVirtual = atoi(value);
-+    if(wfdVirtual && hwcDisplayId > 0) {
-+        //Read virtual display properties and create a
-+        //rendering surface for it inorder to be handled
-+        //by hwc.
-+
-+        sp<ANativeWindow> mNativeWindow = new Surface(currentStateSurface);
-+        ANativeWindow* const window = mNativeWindow.get();
-+
-+        int format;
-+        window->query(window, NATIVE_WINDOW_FORMAT, &format);
-+        EGLSurface surface;
-+        EGLint w, h;
-+        EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-+        // In M AOSP getEGLConfig() always returns EGL_NO_CONFIG as
-+        // EGL_ANDROIDX_no_config_context active now.
-+        EGLConfig config = RenderEngine::chooseEglConfig(display, format);
-+
-+        surface = eglCreateWindowSurface(display, config, window, NULL);
-+        eglQuerySurface(display, surface, EGL_WIDTH, &w);
-+        eglQuerySurface(display, surface, EGL_HEIGHT, &h);
-+#ifndef USE_HWC2
-+        if(hwc->setVirtualDisplayProperties(hwcDisplayId, w, h, format) != NO_ERROR)
-+            return false;
-+#endif
-+
-+        dispSurface = new FramebufferSurface(*hwc, currentStateType, bqConsumer);
-+        producer = bqProducer;
-+        return true;
-+    }
-+    return false;
-+}
-+
-+bool DisplayUtils::canAllocateHwcDisplayIdForVDS(int usage) {
-+    // on AOSP builds with QTI_BSP disabled, we should allocate hwc display id for virtual display
-+    int flag_mask = 0xffffffff;
-+    char value[PROPERTY_VALUE_MAX];
-+    property_get("debug.vds.allow_hwc", value, "0");
-+    int allowHwcForVDS = atoi(value);
-+
-+#ifdef QTI_BSP
-+    // Do not allow hardware acceleration
-+    flag_mask = GRALLOC_USAGE_PRIVATE_WFD;
-+#endif
-+
-+    return ((mHasWbNode) && (allowHwcForVDS || (usage & flag_mask)));
-+}
-+
-+int DisplayUtils::getNumFbNodes() {
-+    int i = 0;
-+    while (hasFbNode(i)) i++;
-+    return i;
-+}
-+
-+bool DisplayUtils::hasFbNode(int index) {
-+    char filename[kMaxStringLength];
-+    snprintf(filename, kMaxStringLength, "/sys/class/graphics/fb%d", index);
-+    if (access(filename, F_OK) < 0) {
-+        return false;
-+    }
-+    return true;
-+}
-+
-+bool DisplayUtils::hasWbNode() {
-+    int fbNum = getNumFbNodes();
-+    char msmFbType [kMaxStringLength];
-+    char fbType [kMaxStringLength];
-+    FILE *displayPanelFP = NULL;
-+    mHasWbNode = false;
-+
-+    for (int i = 0; i < fbNum; i++) {
-+        snprintf (msmFbType,MAX_FRAME_BUFFER_NAME_SIZE, "/sys/class/graphics/fb%d/msm_fb_type", i);
-+        displayPanelFP = fopen(msmFbType, "r");
-+        if(displayPanelFP) {
-+            fread(fbType, sizeof(char), MAX_FRAME_BUFFER_NAME_SIZE, displayPanelFP);
-+            fclose(displayPanelFP);
-+            if(strncmp(fbType, "writeback panel", strlen("writeback panel")) == 0) {
-+                mHasWbNode = true;
-+                break;
-+            }
-+        }
-+    }
-+    return mHasWbNode;
-+}
-+
-+}; // namespace android
-+
