@@ -1077,6 +1077,7 @@ service guiext-server /system/bin/guiext-server
     class main
     user system
     group system graphics
+    seclabel u:object_r:guiext-server_exec:s0
 
 service wmtLoader /system/bin/wmt_loader
     user root
