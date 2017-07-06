@@ -247,10 +247,8 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     Jelly
 
-# mtk symbols, xlog, mrdump
+# mrdump
 PRODUCT_PACKAGES += \
-    libmtk_symbols \
-    libxlog \
     libmrdump \
     mrdump_tool
 

@@ -1,9 +1,9 @@
-From bd2eacac958f68b8b49b712a033586dd0b198adb Mon Sep 17 00:00:00 2001
+From 618e6222bd467e53438553143c9afbbaf93735f3 Mon Sep 17 00:00:00 2001
 From: mdeejay <mdjrussia@gmail.com>
-Date: Wed, 5 Jul 2017 21:17:39 +0700
+Date: Thu, 6 Jul 2017 15:55:51 +0700
 Subject: changes for MTK
 
-Change-Id: I36211d4ee7833b377c6b154a9972986f6fef64d4
+Change-Id: I53a9d2be9aaaec32d2dc73cf2f1ec619d5f71343
 
 diff --git a/include/netutils/ifc.h b/include/netutils/ifc.h
 index 3b272343d..89028a38c 100644
@@ -300,7 +300,7 @@ index 894f90e4a..daf81a905 100644
  LOCAL_SRC_FILES := \
  	ion_test_fixture.cpp \
 diff --git a/liblog/logger_write.c b/liblog/logger_write.c
-index c7b5a8415..7b4e58d74 100644
+index c7b5a8415..5a0e56496 100644
 --- a/liblog/logger_write.c
 +++ b/liblog/logger_write.c
 @@ -31,6 +31,10 @@
@@ -365,11 +365,12 @@ index c7b5a8415..7b4e58d74 100644
  
  #if __BIONIC__
      if (prio == ANDROID_LOG_FATAL) {
-@@ -581,3 +594,26 @@ LIBLOG_ABI_PUBLIC int __android_log_security_bswrite(int32_t tag,
+@@ -581,3 +594,28 @@ LIBLOG_ABI_PUBLIC int __android_log_security_bswrite(int32_t tag,
  
      return write_to_log(LOG_ID_SECURITY, vec, 4);
  }
 +
++#ifdef MTK_HARDWARE
 +#ifndef __unused
 +#define __unused  __attribute__((__unused__))
 +#endif
@@ -392,6 +393,7 @@ index c7b5a8415..7b4e58d74 100644
 +	__android_log_vprint(xlog_record->prio, xlog_record->tag_str, xlog_record->fmt_str, args);
 +    }
 +}
++#endif
 diff --git a/libnetutils/Android.mk b/libnetutils/Android.mk
 index ff899c0f5..8c5334909 100644
 --- a/libnetutils/Android.mk

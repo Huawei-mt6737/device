@@ -208,6 +208,4 @@ POLICYVERS := 29
 # Seccomp filter
 BOARD_SECCOMP_POLICY := device/hs/razar/seccomp
 
-TARGET_LDPRELOAD += libmtk_symbols.so:libxlog.so
-
 MTK_GPU_VERSION := mali midgard r7p0
