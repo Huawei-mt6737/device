@@ -253,8 +253,8 @@ index 000000000..8982febe5
 +    CAMERA_CMD_CANCEL_PANORAMA,
 +    CAMERA_CMD_START_SD_PREVIEW,            //(Smile Detection)
 +    CAMERA_CMD_CANCEL_SD_PREVIEW,           //(Smile Detection)
-+    CAMERA_CMD_START_OT, 
-+    CAMERA_CMD_STOP_OT,  
++    CAMERA_CMD_START_OT,
++    CAMERA_CMD_STOP_OT,
 +    CAMERA_CMD_START_MAV,
 +    CAMERA_CMD_STOP_MAV,
 +    CAMERA_CMD_START_AUTORAMA,
@@ -1088,7 +1088,7 @@ index 000000000..57fd482d6
 +    bool              m_dstFlush;
 +    DpStream          *m_pPqStream;
 +    DpChannel         *m_pPqChannel;
-+    DpAutoBufferPool  *m_pPqPool;    
++    DpAutoBufferPool  *m_pPqPool;
 +    int32_t           m_pqBuffer;
 +    int32_t           m_cropXStart;
 +    int32_t           m_cropYStart;
@@ -1105,7 +1105,7 @@ index 000000000..57fd482d6
 +    bool              m_adaptiveLuma;
 +    uint32_t          m_userID;
 +    DpPqConfig        m_PqConfig;
-+    uint32_t          m_PqID;    
++    uint32_t          m_PqID;
 +    uint32_t          m_engFlag;
 +    //Compatible to 89
 +    int               mRotate;
@@ -2083,7 +2083,6 @@ index a17757a8e..bc0206f32 100644
 +}
 +
 +}
-+
 +
 diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
 new file mode 100644
