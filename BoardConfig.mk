@@ -16,8 +16,6 @@
 
 LOCAL_PATH := device/hs/razar
 
-BOARD_GLOBAL_CFLAGS   += -mfpu=neon -mfloat-abi=softfp
-BOARD_GLOBAL_CPPFLAGS += -mfpu=neon -mfloat-abi=softfp
 BOARD_GLOBAL_CFLAGS += -DNO_SECURE_DISCARD
 BOARD_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
 
