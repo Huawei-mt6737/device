@@ -115,6 +115,7 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_PACKAGES += \
     wifi2agps \
+    wmt_loader
 
 $(call inherit-product, device/common/gps/gps_us_supl.mk)
 
@@ -126,6 +127,25 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/ecc_list.xml:system/etc/ecc_list.xml \
     $(LOCAL_PATH)/configs/spn-conf.xml:system/etc/spn-conf.xml
+
+PRODUCT_PACKAGES += \
+    md_ctrl
+
+# Fuelgauge
+PRODUCT_PACKAGES += \
+    fuelgauged \
+    libfgauge
+
+# GUI UI MTK props
+PRODUCT_PACKAGES += \
+    libgui_ext \
+    libui_ext \
+    libion_mtk
+
+# Thermal manager
+PRODUCT_PACKAGES += \
+    thermal_manager \
+    libmtcloader
 
 # Keylayout
 PRODUCT_COPY_FILES += \
@@ -231,6 +251,10 @@ PRODUCT_PACKAGES += \
 # GPS
 PRODUCT_PACKAGES += \
     gps.mt6737t \
+    libepos \
+    mnld \
+    libmnl \
+    libnvram \
     libcurl
 
 # FM Radio

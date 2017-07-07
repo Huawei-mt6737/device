@@ -676,16 +676,6 @@ service netdiag /system/bin/netdiag
     class main
     socket netdiag stream 0664 root inet
 
-# start ged_srv
-on property:sys.boot_completed=1
-    start ged_srv
-
-service ged_srv /system/bin/ged_srv
-    class core
-    user system
-    group system readproc
-    disabled
-
 service nvram_daemon /system/bin/nvram_daemon
     class main
     user root
@@ -931,7 +921,7 @@ service agpsd /system/bin/mtk_agpsd
     user gps
     group gps radio inet sdcard_r sdcard_rw misc system
 
-service mnld /system/xbin/mnld
+service mnld /vendor/bin/mnld
     class main
     user gps
     group gps inet misc sdcard_rw sdcard_r media_rw system radio
@@ -1072,12 +1062,6 @@ service fuelgauged /system/bin/fuelgauged
     class main
     user system
     group system
-
-# GuiExt Server init
-service guiext-server /system/bin/guiext-server
-    class main
-    user system
-    group system graphics
 
 service wmtLoader /system/bin/wmt_loader
     user root
