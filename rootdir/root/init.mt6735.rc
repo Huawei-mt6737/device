@@ -1007,6 +1007,7 @@ service qmcX983d   /system/bin/qmcX983d
     oneshot
 	
 service mc6470d   /system/bin/mc6470d
+    disabled
     user system
     group system
     class main
@@ -1077,7 +1078,6 @@ service guiext-server /system/bin/guiext-server
     class main
     user system
     group system graphics
-    seclabel u:object_r:guiext-server_exec:s0
 
 service wmtLoader /system/bin/wmt_loader
     user root

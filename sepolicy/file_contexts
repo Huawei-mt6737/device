@@ -29,7 +29,7 @@
 /system/bin/memsicd3416x                                        u:object_r:memsicd3416x_exec:s0
 /system/bin/memsicd3524x                                        u:object_r:memsicd3524x_exec:s0
 /system/bin/qmcX983d                                            u:object_r:qmcX983d_exec:s0
-#/system/bin/guiext-server                                       u:object_r:guiext-server_exec:s0
+/system/bin/guiext-server                                       u:object_r:guiext-server_exec:s0
 /system/bin/geomagneticd                                       u:object_r:geomagneticd_exec:s0
 /system/bin/orientationd                                       u:object_r:orientationd_exec:s0
 /system/bin/mc6470d                                       u:object_r:mc6470d_exec:s0

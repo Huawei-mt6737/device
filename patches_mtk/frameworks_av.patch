@@ -1,9 +1,9 @@
-From bb8c8bf1ee2dc3cc753b9be726afb03e06646810 Mon Sep 17 00:00:00 2001
+From e80fce8d49fe461cc9b91f0dd82e6fc7ba05f33b Mon Sep 17 00:00:00 2001
 From: mdeejay <mdjrussia@gmail.com>
-Date: Thu, 6 Jul 2017 01:36:46 +0700
+Date: Fri, 7 Jul 2017 16:03:51 +0700
 Subject: changes for MTK
 
-Change-Id: Ib06be5301cb4b5f8818d60f21413fc66820e8085
+Change-Id: Ibeff7aa003e9d1981e05a339048cfcabe30a03f1
 
 diff --git a/camera/CameraParameters.cpp b/camera/CameraParameters.cpp
 index 76f92e715..38cdc5f97 100644
@@ -47,7 +47,7 @@ index 74517b47b..d17a6a16d 100644
      static const char TRUE[];
 diff --git a/include/camera/MtkCamera.h b/include/camera/MtkCamera.h
 new file mode 100644
-index 000000000..8982febe5
+index 000000000..9c023a7d4
 --- /dev/null
 +++ b/include/camera/MtkCamera.h
 @@ -0,0 +1,275 @@
@@ -877,7 +877,7 @@ index 05f65819f..b78b047c9 100644
      };
 diff --git a/include/media/stagefright/dpframework/DpBlitStream.h b/include/media/stagefright/dpframework/DpBlitStream.h
 new file mode 100644
-index 000000000..57fd482d6
+index 000000000..787dfac29
 --- /dev/null
 +++ b/include/media/stagefright/dpframework/DpBlitStream.h
 @@ -0,0 +1,243 @@
@@ -2057,10 +2057,10 @@ index bb4ea4108..eeb565ebf 100644
          createVideoBufferMemoryHeap(sizeof(VideoNativeHandleMetadata), kDefaultVideoBufferCount);
      }
 diff --git a/media/libstagefright/MediaSource.cpp b/media/libstagefright/MediaSource.cpp
-index a17757a8e..bc0206f32 100644
+index a17757a8e..6d79ad635 100644
 --- a/media/libstagefright/MediaSource.cpp
 +++ b/media/libstagefright/MediaSource.cpp
-@@ -23,3 +23,24 @@ MediaSource::MediaSource() {}
+@@ -23,3 +23,21 @@ MediaSource::MediaSource() {}
  MediaSource::~MediaSource() {}
  
  }  // namespace android
@@ -2081,9 +2081,7 @@ index a17757a8e..bc0206f32 100644
 +    int64_t res = readOptions->getLateBy();
 +    return res;
 +}
-+
 +}
-+
 diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
 new file mode 100644
 index 000000000..de00ff282
