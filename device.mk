@@ -124,11 +124,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/ecc_list.xml:system/etc/ecc_list.xml \
     $(LOCAL_PATH)/configs/spn-conf.xml:system/etc/spn-conf.xml
 
-# IPv6
-PRODUCT_PACKAGES += \
-    ebtables \
-    ethertypes
-
 # Keylayout
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/keylayout/mtk-kpd.kl:system/usr/keylayout/mtk-kpd.kl \
