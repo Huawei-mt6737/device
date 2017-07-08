@@ -32,18 +32,13 @@
 #ifdef LOGE
 #undef LOGE
 #endif
-#if 0
-#define LOGD(...) tag_log(1, "[mnld]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[mnld] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[mnld] ERR: ", __VA_ARGS__);
-#else
+
 #define LOG_TAG "mtk_lbs_utility"
 #include <cutils/sockets.h>
 #include <cutils/log.h>     /*logging in logcat*/
 #define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
 #define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
 #define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
 
 
 // -1 means failure
@@ -91,7 +86,6 @@ void tag_log(int type, const char* tag, const char *fmt, ...) {
     UNUSED(prio);
     get_time_str(time_buf, sizeof(time_buf));
     printf("%s %s\n", time_buf, out_buf);
-    // printf("%s 0x%08x %s\n", time_buf, pthread_self(), out_buf);
 #endif
 }
 

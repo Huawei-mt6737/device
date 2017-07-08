@@ -36,29 +36,6 @@
 #include "gpshal_param_check.h"
 #include "hal2mnl_interface.h"
 #include "mtk_lbs_utility.h"
-#if 0
-#ifdef LOGD
-#undef LOGD
-#endif
-#ifdef LOGW
-#undef LOGW
-#endif
-#ifdef LOGE
-#undef LOGE
-#endif
-#if 0
-#define LOGD(...) tag_log(1, "[gpshal]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[gpshal] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[gpshal] ERR: ", __VA_ARGS__);
-#else
-#define LOG_TAG "gpsinf"
-#include <cutils/sockets.h>
-#include <cutils/log.h>     /*logging in logcat*/
-#define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
-#endif
 //=========================================================
 
 extern struct hw_module_t HAL_MODULE_INFO_SYM;
@@ -141,23 +118,6 @@ static const void* gpsinf_get_extension(const char* name) {
     if (strcmp(name, GPS_NAVIGATION_MESSAGE_INTERFACE) == 0) {
        return &mtk_navi_msg_inf;
     }
-#if 0  // not supported, even in our MP branches
-    if (!strcmp(name, GPS_GEOFENCING_INTERFACE))
-        return &mtk_gps_geofencing_inf;
-#endif
-#if 0  // not supported, even in our MP branches
-    if (!strcmp(name, GNSS_CONFIGURATION_INTERFACE))
-        return &mtk_gnss_config_inf;
-#endif
-#if 0  // not ready, even in Google's GPS JNI
-    if (strcmp(name, SUPL_CERTIFICATE_INTERFACE) == 0) {
-       return &mtk_supl_cert_inf;
-    }
-#endif
-#if 0  // Similar to our EPO but we will do it in mnld.
-    if (!strcmp(name, GPS_XTRA_INTERFACE))
-        return &mtk_gps_xtra_inf;
-#endif
     return NULL;  // unsupported extension
 }
 
@@ -173,7 +133,6 @@ static const void* gpsinf_get_extension(const char* name) {
 //     android_location_GpsLocationProvider_init
 //     sGpsInterface->init
 static int gpsinf_init(GpsCallbacks* callbacks) {
-    // GPSHAL_DEBUG_FUNC_SCOPE2(g_gpshal_ctx.mutex_gps_state_intent);
     if (gpshal_gpscbs_save(callbacks) != 0) {
         return -1;    //  error
     }
@@ -185,7 +144,6 @@ static int gpsinf_init(GpsCallbacks* callbacks) {
 
 // Thread: BackgroundThread
 static int gpsinf_start(void) {
-    // GPSHAL_DEBUG_FUNC_SCOPE2(g_gpshal_ctx.mutex_gps_state_intent);
     gpshal_set_gps_state_intent(GPSHAL_STATE_START);
     gpshal2mnl_gps_start();
     return 0;  // OK to start
@@ -193,7 +151,6 @@ static int gpsinf_start(void) {
 
 // Thread: BackgroundThread
 static int gpsinf_stop(void) {
-    // GPSHAL_DEBUG_FUNC_SCOPE2(g_gpshal_ctx.mutex_gps_state_intent);
     gpshal_set_gps_state_intent(GPSHAL_STATE_STOP);
     gpshal2mnl_gps_stop();
     return 0;  // OK to stop
@@ -201,7 +158,6 @@ static int gpsinf_stop(void) {
 
 // Thread: BackgroundThread
 static void gpsinf_cleanup(void) {
-    // GPSHAL_DEBUG_FUNC_SCOPE2(g_gpshal_ctx.mutex_gps_state_intent);
     gpshal_set_gps_state_intent(GPSHAL_STATE_CLEANUP);
     gpshal2mnl_gps_cleanup();
 }

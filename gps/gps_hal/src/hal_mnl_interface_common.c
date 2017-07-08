@@ -1,28 +1,6 @@
 #include "hal_mnl_interface_common.h"
 #include "mtk_lbs_utility.h"
-#if 0
-#ifdef LOGD
-#undef LOGD
-#endif
-#ifdef LOGW
-#undef LOGW
-#endif
-#ifdef LOGE
-#undef LOGE
-#endif
-#if 0
-#define LOGD(...) tag_log(1, "[gpshal]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[gpshal] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[gpshal] ERR: ", __VA_ARGS__);
-#else
-#define LOG_TAG "gpshal_dump"
-#include <cutils/sockets.h>
-#include <cutils/log.h>     /*logging in logcat*/
-#define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
-#endif
+
 void dump_gps_location(gps_location in) {
     LOGD("===== dump_gps_location ====");
     LOGD("flags=0x%x", in.flags);

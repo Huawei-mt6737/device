@@ -35,29 +35,6 @@
 #include "gpshal.h"
 #include "hal2mnl_interface.h"
 #include "mtk_lbs_utility.h"
-#if 0
-#ifdef LOGD
-#undef LOGD
-#endif
-#ifdef LOGW
-#undef LOGW
-#endif
-#ifdef LOGE
-#undef LOGE
-#endif
-#if 0
-#define LOGD(...) tag_log(1, "[gpshal]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[gpshal] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[gpshal] ERR: ", __VA_ARGS__);
-#else
-#define LOG_TAG "agpsinf"
-#include <cutils/sockets.h>
-#include <cutils/log.h>     /*logging in logcat*/
-#define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
-#endif
 //=========================================================
 // Agps Interface
 
@@ -116,7 +93,6 @@ static void agps_ril_init(AGpsRilCallbacks* callbacks) {
 static void agps_ril_set_ref_location(
         const AGpsRefLocation *agps_reflocation,
         __unused size_t sz_struct) {
-    // UNUSED(sz_struct);
     uint16_t type = agps_reflocation->type;
     switch (type) {
         case AGPS_REF_LOCATION_TYPE_GSM_CELLID:
@@ -126,9 +102,6 @@ static void agps_ril_set_ref_location(
                      type, cell.mcc, cell.mnc, cell.lac, cell.cid);
             break;
         }
-        // case AGPS_REG_LOCATION_TYPE_MAC:
-            // TODO: to support MAC when GPS JNI can support it
-            // break;
         default:
             LOGW("%s: unsupported ref loc type: %d", __func__, type);
     }
@@ -159,33 +132,4 @@ const AGpsRilInterface mtk_agps_ril_inf = {
     agps_ril_update_network_state,
     agps_ril_update_network_availability
 };
-
-//=========================================================
-// Supl Certificate Interface
-
-#if 0  // not ready, even in GPS JNI
-static int suplcert_install_certificates(
-        __unused const DerEncodedCertificate* certificates,
-        __unused size_t length) {
-    UNUSED_VAR(certificates);
-    UNUSED_VAR(length);
-    // TODO: to use the new hal2mnl lib
-    return -1;
-}
-
-static int suplcert_revoke_certificates(
-        __unused const Sha1CertificateFingerprint* fingerprints,
-        __unused size_t length) {
-    UNUSED_VAR(fingerprints);
-    UNUSED_VAR(length);
-    // TODO: to use the new hal2mnl lib
-    return -1;
-}
-
-const SuplCertificateInterface mtk_supl_cert_inf = {
-    sizeof(SuplCertificateInterface),
-    suplcert_install_certificates,
-    suplcert_revoke_certificates,
-};
-#endif
 

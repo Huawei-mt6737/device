@@ -11,18 +11,12 @@
 #ifdef LOGE
 #undef LOGE
 #endif
-#if 0
-#define LOGD(...) tag_log(1, "[gps_dbg_log]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[gps_dbg_log] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[gps_dbg_log] ERR: ", __VA_ARGS__);
-#else
 #define LOG_TAG "hal2mnl"
 #include <cutils/sockets.h>
 #include <cutils/log.h>     /*logging in logcat*/
 #define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
 #define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
 #define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
 
 static float count = 0;
 static float report_time_interval = 0;

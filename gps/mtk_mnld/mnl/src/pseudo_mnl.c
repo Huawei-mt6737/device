@@ -34,18 +34,12 @@
 #undef LOG_TAG
 #endif
 
-#if 0
-#define LOGD(...) tag_log(1, "[pseudo]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[pseudo] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[pseudo] ERR: ", __VA_ARGS__);
-#else
 #define LOG_TAG "pseudo"
 #include <cutils/sockets.h>
 #include <cutils/log.h>     /*logging in logcat*/
 #define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
 #define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
 #define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
 // #define LIB_MQUEUE
 
 #define MAX_RETRY_COUNT       20
@@ -127,16 +121,13 @@ int mtk_gps_sys_init() {
 
         if (strlen(stGPSReadback.dsp_dev) != 0) {
             gps_nvram_valid = 1;
-            // strncpy(mnl_config.dev_dsp, stGPSReadback.dsp_dev, sizeof(mnl_config.dev_dsp));
 
             LOGD("GPS NVRam (%d * %d) : \n", rec_size, rec_num);
             LOGD("dsp_dev(/dev/stpgps) : %s\n", stGPSReadback.dsp_dev);
-            // LOGD("gps_if_type : %d\n", stGPSReadback.gps_if_type);
             LOGD("gps_tcxo_hz : %d\n", stGPSReadback.gps_tcxo_hz);
             LOGD("gps_tcxo_ppb : %d\n", stGPSReadback.gps_tcxo_ppb);
             LOGD("gps_tcxo_type : %d\n", stGPSReadback.gps_tcxo_type);
             LOGD("gps_lna_mode : %d\n", stGPSReadback.gps_lna_mode);
-            // LOGD("gps_sbas_mode : %d\n", stGPSReadback.gps_sbas_mode);
         } else {
             LOGD("GPS NVRam mnl_config.dev_dsp == NULL \n");
         }
@@ -190,8 +181,6 @@ INT32 mtk_gps_sys_frame_sync_meas_req(MTK_GPS_FS_WORK_MODE mode) {
     memset(szBuf_cipher, 0, sizeof(szBuf_cipher));
     sprintf(sztmp, "PMTK%d,1,%d", PMTK_FS_REQ_MEAS, mode);
     sprintf(outbuf, "$%s*%02X\r\n", sztmp, calc_nmea_checksum1(sztmp));
-
-    // SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
     memcpy(szBuf_cipher, outbuf, strlen(outbuf));
     mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
 
@@ -208,8 +197,6 @@ INT32 mtk_gps_sys_frame_sync_enable_sleep_mode(unsigned char mode) {
     memset(szBuf_cipher, 0, sizeof(szBuf_cipher));
     sprintf(sztmp, "PMTK%d,%d", PMTK_FS_SLEEPMODE, mode);
     sprintf(outbuf, "$%s*%02X\r\n", sztmp, calc_nmea_checksum1(sztmp));
-
-    // SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
     memcpy(szBuf_cipher, outbuf, strlen(outbuf));
     mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
 
@@ -226,8 +213,6 @@ INT32 mtk_gps_sys_frame_sync_meas_req_by_network(void) {
     memset(szBuf_cipher, 0, sizeof(szBuf_cipher));
     sprintf(sztmp, "PMTK%d,0,0", PMTK_FS_REQ_MEAS);
     sprintf(outbuf, "$%s*%02X\r\n", sztmp, calc_nmea_checksum1(sztmp));
-
-    // SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
     memcpy(szBuf_cipher, outbuf, strlen(outbuf));
     mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
 

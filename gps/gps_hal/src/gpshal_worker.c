@@ -36,32 +36,8 @@
 #include <sys/epoll.h>  // epoll_create, epoll_event
 #include <errno.h>     // errno
 #include <string.h>    // strerror
-// #include <linux/in.h>   // INADDR_NONE
 #include "hal2mnl_interface.h"
 #include "mtk_lbs_utility.h"
-#if 0
-#ifdef LOGD
-#undef LOGD
-#endif
-#ifdef LOGW
-#undef LOGW
-#endif
-#ifdef LOGE
-#undef LOGE
-#endif
-#if 0
-#define LOGD(...) tag_log(1, "[gpshal]", __VA_ARGS__);
-#define LOGW(...) tag_log(1, "[gpshal] WARNING: ", __VA_ARGS__);
-#define LOGE(...) tag_log(1, "[gpshal] ERR: ", __VA_ARGS__);
-#else
-#define LOG_TAG "gpshal_worker"
-#include <cutils/sockets.h>
-#include <cutils/log.h>     /*logging in logcat*/
-#define LOGD(fmt, arg ...) ALOGD("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGW(fmt, arg ...) ALOGW("%s: " fmt, __FUNCTION__ , ##arg)
-#define LOGE(fmt, arg ...) ALOGE("%s: " fmt, __FUNCTION__ , ##arg)
-#endif
-#endif
 //=========================================================
 
 #define GPSHAL_WORKER_THREAD_TIMEOUT (30*1000)
@@ -72,7 +48,6 @@
 //=========================================================
 
 static void update_mnld_reboot() {
-// GPSHAL_DEBUG_FUNC_SCOPE2(g_gpshal_ctx.mutex_gps_state_intent);
     gpshal_state state = g_gpshal_ctx.gps_state_intent;
     LOGD("state: (%d)", state);
     switch (state) {
@@ -91,10 +66,6 @@ static void update_mnld_reboot() {
     }
 }
 static void update_location(gps_location location) {
-    // Use mutex or not ?
-    //     If no, the issue may occur.
-    //     If yes, there will be a little performance impact.
-  //  GPSHAL_DEBUG_FUNC_SCOPE;
     GpsLocation loc;
     dump_gps_location(location);
     gpshal_state state = g_gpshal_ctx.gps_state_intent;
@@ -126,7 +97,6 @@ static void update_gps_status(gps_status status) {
 
 static void update_gps_sv(gnss_sv_info sv) {
 
-   // GPSHAL_DEBUG_FUNC_SCOPE;
     int i;
     GnssSvStatus gss;
     dump_gnss_sv_info(sv);
@@ -156,7 +126,6 @@ static void update_gps_capabilities(gps_capabilites capabilities) {
     g_gpshal_ctx.gps_cbs->set_capabilities_cb(capabilities);
 }
 static void update_gps_measurements(gps_data data) {
-   // GPSHAL_DEBUG_FUNC_SCOPE;
     size_t i;
     GpsData gd;
     dump_gps_data(data);
@@ -219,7 +188,6 @@ static void update_gps_measurements(gps_data data) {
     g_gpshal_ctx.meas_cbs->measurement_callback(&gd);
 }
 static void update_gps_navigation(gps_nav_msg msg) {
-  //  GPSHAL_DEBUG_FUNC_SCOPE;
     GpsNavigationMessage gnm;
     dump_gps_nav_msg(msg);
     gnm.size = sizeof(gnm);
@@ -299,30 +267,24 @@ static void update_gnss_navigation(gnss_nav_msg msg) {
 }
 
 static void request_wakelock() {
-   // GPSHAL_DEBUG_FUNC_SCOPE;
     g_gpshal_ctx.gps_cbs->acquire_wakelock_cb();
 }
 static void release_wakelock() {
-   // GPSHAL_DEBUG_FUNC_SCOPE;
     g_gpshal_ctx.gps_cbs->release_wakelock_cb();
 }
 static void request_utc_time() {
-   // GPSHAL_DEBUG_FUNC_SCOPE;
     g_gpshal_ctx.gps_cbs->request_utc_time_cb();
 }
 static void request_data_conn(__unused struct sockaddr_storage* addr) {
-  //  GPSHAL_DEBUG_FUNC_SCOPE;
     UNUSED(addr);
     AGpsStatus as;
     as.size   = sizeof(AGpsStatus);  // our imp supports v3
     as.type   = AGPS_TYPE_SUPL;
     as.status = GPS_REQUEST_AGPS_DATA_CONN;
-    // as.ipaddr = INADDR_NONE; // not used in v3
     as.addr   = *addr;
     g_gpshal_ctx.agps_cbs->status_cb(&as);
 }
 static void release_data_conn() {
-    // GPSHAL_DEBUG_FUNC_SCOPE;
     AGpsStatus as;
     as.size   = sizeof(AGpsStatus_v1);  // use v1 size to omit optional fields
     as.type   = AGPS_TYPE_SUPL;
@@ -396,7 +358,6 @@ static mnl2hal_interface gpshal_mnl2hal_interface = {
 //=========================================================
 
 void gpshal_worker_thread(__unused void *arg) {
-   // GPSHAL_DEBUG_FUNC_SCOPE;
     struct epoll_event events[MAX_EPOLL_EVENT];
     UNUSED(arg);
 

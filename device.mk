@@ -131,22 +131,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     md_ctrl
 
-# Fuelgauge
-PRODUCT_PACKAGES += \
-    fuelgauged \
-    libfgauge
-
-# GUI UI MTK props
-PRODUCT_PACKAGES += \
-    libgui_ext \
-    libui_ext \
-    libion_mtk
-
-# Thermal manager
-PRODUCT_PACKAGES += \
-    thermal_manager \
-    libmtcloader
-
 # Keylayout
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/keylayout/mtk-kpd.kl:system/usr/keylayout/mtk-kpd.kl \
@@ -257,6 +241,14 @@ PRODUCT_PACKAGES += \
     libnvram \
     libcurl
 
+# BT MTK
+PRODUCT_PACKAGES += \
+    libbluetooth_mtk \
+    libbt-vendor \
+    libbluetooth_mtk_pure \
+    libbluetoothem_mtk \
+    libbluetooth_relayer
+
 # FM Radio
 PRODUCT_PACKAGES += \
     radio.fm.mt6737t \
@@ -264,9 +256,22 @@ PRODUCT_PACKAGES += \
     libfmjni \
     libfmcust
 
-# ION
+# Fuelgauge
 PRODUCT_PACKAGES += \
+    fuelgauged \
+    libfgauge
+
+# GUI UI MTK props
+PRODUCT_PACKAGES += \
+    libgui_ext \
+    libui_ext \
+    libion_mtk \
     libion
+
+# Thermal manager
+PRODUCT_PACKAGES += \
+    thermal_manager \
+    libmtcloader
 
 # Camera
 PRODUCT_PACKAGES += \
