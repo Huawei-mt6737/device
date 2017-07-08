@@ -12,8 +12,8 @@ LOCAL_SRC_FILES := \
 
 LOCAL_C_INCLUDES := \
   system/bt/hci/include \
-  $(LOCAL_PATH)/bluetooth-mtk/include/libnvram \
-  $(LOCAL_PATH)/bluetooth-mtk/include
+  device/hs/razar/bluetooth-mtk/include/libnvram \
+  device/hs/razar/bluetooth-mtk/include
 
 LOCAL_CFLAGS += -DMTK_CONSYS_MT6735
 

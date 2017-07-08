@@ -11,8 +11,8 @@ LOCAL_SRC_FILES := \
   radiomod.c
 
 LOCAL_C_INCLUDES := \
-  $(LOCAL_PATH)/bluetooth-mtk/include/libnvram \
-  $(LOCAL_PATH)/bluetooth-mtk/include \
+  device/hs/razar/bluetooth-mtk/include/libnvram \
+  device/hs/razar/bluetooth-mtk/include \
   $(LOCAL_PATH)/../inc
 
 LOCAL_CFLAGS += -DMTK_CONSYS_MT6735

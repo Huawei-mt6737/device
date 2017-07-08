@@ -48,7 +48,7 @@ LOCAL_SRC_FILES := \
 	lib/SWWatchDog.cpp
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/libgem/inc \
+	device/hs/razar/libgem/inc \
 	external/libpng \
 	external/zlib \
 	external/skia/src/images \
@@ -88,7 +88,7 @@ LOCAL_SRC_FILES := \
 	lib/GuiExtImpl.cpp
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/libgem/inc \
+	device/hs/razar/libgem/inc \
 
 LOCAL_SHARED_LIBRARIES := \
 	libutils \
