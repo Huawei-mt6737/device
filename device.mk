@@ -239,7 +239,6 @@ PRODUCT_PACKAGES += \
     libepos \
     mnld \
     libmnl \
-    libnvram \
     libcurl
 
 # BT MTK
@@ -261,6 +260,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     fuelgauged \
     libfgauge
+
+# NVRAM
+PRODUCT_PACKAGES += \
+    libnvram \
+    libcustom_nvram
 
 # GUI UI MTK props
 PRODUCT_PACKAGES += \
