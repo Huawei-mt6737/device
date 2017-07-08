@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+LOCAL_PATH := device/hs/razar
+
 # Inherit some common Lineage OS stuff.
 $(call inherit-product, vendor/cm/config/common_full_phone.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/languages_full.mk)
@@ -21,7 +23,7 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 
 # Inherit device configuration
-$(call inherit-product, device/hs/razar/device.mk)
+$(call inherit-product, $(LOCAL_PATH)/device.mk)
 $(call inherit-product-if-exists, vendor/hs/razar/razar-vendor.mk)
 
 # Inherit prebuilt Google apps.

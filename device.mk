@@ -16,7 +16,7 @@
 
 LOCAL_PATH := device/hs/razar
 
-DEVICE_PACKAGE_OVERLAYS += device/hs/razar/overlay
+DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
 
 # AAPT configs
 PRODUCT_AAPT_CONFIG := normal

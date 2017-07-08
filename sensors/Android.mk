@@ -47,7 +47,7 @@ GameRotationVector.cpp Linearacceleration.cpp GeomagneticRotationVector.cpp Rota
 Uncalimag.cpp AnswerCall.cpp Pdr.cpp Gesture.cpp
 
 LOCAL_C_INCLUDES+= \
-        device/hs/razar/sensor/
+        $(LOCAL_PATH)/sensor/
 
 LOCAL_CFLAGS += -DUSE_SENSOR_MULTI_HAL
 LOCAL_CFLAGS += -DCUSTOM_KERNEL_ACCELEROMETER
