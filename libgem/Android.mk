@@ -48,8 +48,7 @@ LOCAL_SRC_FILES := \
 	lib/SWWatchDog.cpp
 
 LOCAL_C_INCLUDES := \
-	device/hs/razar/libgem/inc \
-	device/hs/razar/libgem/inc \
+	$(LOCAL_PATH)/libgem/inc \
 	external/libpng \
 	external/zlib \
 	external/skia/src/images \

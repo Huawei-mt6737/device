@@ -3,8 +3,8 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
-				  fgauge_main_2.cpp \
-				  fg_log.cpp 
+	fgauge_main_2.cpp \
+	fg_log.cpp 
 
 LOCAL_CFLAGS += $(MTK_CDEFS)
 LOCAL_FORCE_STATIC_EXECUTABLE := true
