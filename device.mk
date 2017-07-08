@@ -205,6 +205,8 @@ PRODUCT_PACKAGES += \
     audio_policy.stub \
     libaudiopolicymanagerdefault \
     libaudio-resampler \
+    libaudiocustparam \
+    libaudiosetting \
     libtinyalsa \
     libtinycompress \
     libtinymix \
