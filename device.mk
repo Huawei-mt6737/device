@@ -205,7 +205,6 @@ PRODUCT_PACKAGES += \
     audio_policy.stub \
     libaudiopolicymanagerdefault \
     libaudio-resampler \
-    libaudiocustparam \
     libaudiosetting \
     libtinyalsa \
     libtinycompress \
@@ -268,12 +267,14 @@ PRODUCT_PACKAGES += \
     libgui_ext \
     libui_ext \
     libion_mtk \
-    libion
+    libion \
+    librrc
 
 # Thermal manager
 PRODUCT_PACKAGES += \
     thermal_manager \
-    libmtcloader
+    libmtcloader \
+    libperfservicenative
 
 # Camera
 PRODUCT_PACKAGES += \

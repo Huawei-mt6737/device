@@ -6,8 +6,8 @@
  * Without the prior written permission of MediaTek inc. and/or its licensors,
  * any reproduction, modification, use or disclosure of MediaTek Software,
  * and information contained herein, in whole or in part, shall be strictly prohibited.
- *
- * MediaTek Inc. (C) 2010. All rights reserved.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
  *
  * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
  * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
@@ -39,7 +39,7 @@
 *  This software is protected by Copyright and the information contained
 *  herein is confidential. The software may not be copied and the information
 *  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
+*  permission of MediaTek Inc. (C) 2009
 *
 *  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
 *  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
@@ -67,79 +67,176 @@
 *  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
 *
 *****************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
 
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * audio_volume_custom_default.h
- *
- * Project:
- * --------
- *   ALPS
- *
- * Description:
- * ------------
- * This file is the header of audio customization related parameters or definition.
- *
- * Author:
- * -------
- * Chipeng chang
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- *
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
-#ifndef AUDIO_VOLUME_CUSTOM_DEFAULT_H
-#define AUDIO_VOLUME_CUSTOM_DEFAULT_H
+#include <linux/ioctl.h>
+#include <string.h>
 
-#define AUD_VOLUME_RING \
-     0,32,64,96,128,160,192,\
-     136, 160, 184, 204, 220, 236, 255,\
-     136, 160, 184, 204, 220, 236, 255
 
-#define AUD_VOLUME_KEY \
-     108, 132, 156, 180, 204, 228, 252,\
-     108, 132, 156, 180, 204, 228, 252,\
-     108, 132, 156, 180, 204, 228, 252
+#include <cutils/log.h>
 
-#define AUD_VOLUME_MIC \
-      64, 255, 255, 148, 200, 200, 160,\
-     225, 192, 192, 160, 216, 208, 172,     \
-     255, 208, 208, 180, 255, 208, 172
-#define AUD_VOLUME_FMR \
-     0,43,85,128,171,213,255,\
-     20, 52, 84, 116, 148, 184, 220,\
-     52, 84, 120, 148, 180, 216, 255
+#ifdef MTK_RRC_ENABLE
+  #define MTK_RRC_INC_DRV
+#endif
 
-#define AUD_VOLUME_SPH \
-     40,52,64,76,88,100,112,\ 
-     40,52,64,76,88,100,112,\ 
-     40, 52, 64, 76, 88, 100, 112
-#define AUD_VOLUME_SID \
-     0,0,16,0,0,0,0,\ 
-     0,0,32,0,0,0,0,\ 
-     0,0,0,0,0,0,0
+#ifdef MTK_RRC_INC_DRV
+  #include <linux/rrc_drv.h>
+#endif
 
-#define AUD_VOLUME_MEDIA \
-     132, 148, 148, 148, 128, 148, 120,\    
-     88, 116, 144, 172, 200, 228, 255,\
-     124, 144, 164, 184, 204, 224, 255
+#include <cutils/log.h>
+#include <utils/Errors.h>
 
-#define AUD_VOLUME_MATV \
-     0,43,85,128,171,213,255,\
-     88, 116, 144, 172, 200, 228, 255,\
-     124, 144, 164, 184, 204, 224, 255
+#include <refresh_rate_control.h>
+
+#include    <utils/Log.h>
+
+#include <cutils/properties.h>
+
+
+
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
+
+#define LOG_TAG "RefreshRateControl"
+
+
+
+#define RRC_DRV_NAME           "/dev/mtk_rrc"
+
+static int currentID;
+
+static unsigned int allocated;
+
+
+RefreshRateControl::RefreshRateControl()
+{
+}
+
+
+RefreshRateControl::~RefreshRateControl()
+{
+}
+
+
+int RefreshRateControl::setScenario(int scenario, bool enable){
+
+#ifdef MTK_RRC_INC_DRV
+
+    int drvID ;
+
+    RRC_DRV_DATA rrc_data ;
+    unsigned int result = 0;
+    int config_enable = enable ;
+
+    if(!(scenario > RRC_TYPE_NONE && scenario < RRC_TYPE_MAX_SIZE)){
+        ALOGW("[RRC] setScenario RRC Driver scenario error range (%d)", scenario);
+        return -1;
+    }
+
+
+
+#ifdef MTK_RRC_ENABLE_PROP
+
+    {
+        char value[PROPERTY_VALUE_MAX];
+        unsigned long u4PQOpt;
+
+        property_get("persist.rrc", value, "0");
+        u4PQOpt = atol(value);
+        if(0 != u4PQOpt)
+        {
+
+            if(u4PQOpt == 1){
+                /* skip all event */
+                //ALOGW("[RRC] skip all event!!\n");
+                return 0;
+            } else if( u4PQOpt == 2 ) {
+                /* skip video event */
+                if((scenario >= RRC_TYPE_VIDEO_NORMAL && scenario <= RRC_TYPE_VIDEO_WIFI_DISPLAY)){
+                    return 0;
+                }
+            } else if (u4PQOpt == 3) {
+                /* always keep HIGH */
+                if((scenario >= RRC_TYPE_VIDEO_NORMAL && scenario <= RRC_TYPE_VIDEO_WIFI_DISPLAY)){
+                    return 0;
+                }
+                /* skip touch leave */
+                if( scenario == RRC_DRV_TYPE_TOUCH_EVENT && enable == 0){
+                    return 0;
+                }
+            } else if (u4PQOpt == 4) {
+                /* always keep LOW */
+                if((scenario >= RRC_TYPE_VIDEO_NORMAL && scenario <= RRC_TYPE_VIDEO_WIFI_DISPLAY)){
+                    return 0;
+                }
+                /* skip touch down */
+                if( scenario == RRC_DRV_TYPE_TOUCH_EVENT && enable == 1){
+                    return 0;
+                }
+            }
+        }
+    }
+#endif
+
+
+    ALOGW("[RRC] setScenario %d, config_enable %d!!\n", scenario, config_enable);
+
+
+    if(scenario == RRC_TYPE_VIDEO_120HZ)
+    {
+        scenario = RRC_DRV_TYPE_VIDEO_PLAYBACK ;
+        if ( config_enable ){
+            config_enable = 2 ;
+        }
+        ALOGW("[RRC] Video120Hz setScenario %d, config_enable %d!!\n", scenario, config_enable);
+    }
+
+
+
+    drvID = open(RRC_DRV_NAME, O_RDONLY, 0);
+
+    if( drvID == -1 )
+    {
+        ALOGW("Open RRC Driver Error (%s)", strerror(errno));
+        return -1;
+    }
+
+
+    if(ioctl(drvID, RRC_IOCTL_CMD_INIT)<0)
+    {
+        ALOGW("RefreshRateControl Driver->RRC_IOCTL_CMD_INIT Error (%s)", strerror(errno));
+        close(drvID);
+        drvID = -1;
+        return -1;
+    }
+
+
+    rrc_data.scenario = scenario ;
+    rrc_data.enable = config_enable ;
+
+    if(ioctl(drvID, RRC_IOCTL_CMD_SET_SCENARIO_TYPE, &rrc_data) < 0)
+    {
+        ALOGW("RefreshRateControl Driver->RRC_IOCTL_CMD_SET_SCENARIO_TYPE Error (%s)", strerror(errno));
+        close(drvID);
+        return -1;
+    }
+
+    if(ioctl(drvID, RRC_IOCTL_CMD_DEINIT) < 0)
+    {
+        return -1;
+    }
+
+    close(drvID);
 
 #endif
+
+    return 0;
+}
