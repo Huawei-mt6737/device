@@ -1,0 +1,42 @@
+From 85d154a1dbb9444324282e84e9d65bd1cbe686e9 Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:28:56 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: Ic55d732846b158db7236800a44b625b1d44d1219
+
+diff --git a/server/NatController.cpp b/server/NatController.cpp
+index 81909c2..0da8bf6 100644
+--- a/server/NatController.cpp
++++ b/server/NatController.cpp
+@@ -395,7 +395,7 @@ int NatController::setForwardRules(bool add, const char *intIface, const char *e
+         goto err_return;
+     }
+ 
+-    if (runCmd(ARRAY_SIZE(cmd4), cmd4) && add) {
++    if (runCmd(ARRAY_SIZE(cmd4), cmd4) && add && false /* STOPSHIP */) {
+         rc = -1;
+         goto err_rpfilter;
+     }
+diff --git a/server/SoftapController.cpp b/server/SoftapController.cpp
+index 8d7beef..79591fa 100755
+--- a/server/SoftapController.cpp
++++ b/server/SoftapController.cpp
+@@ -53,7 +53,7 @@ using android::base::WriteStringToFile;
+ #include "wpa_ctrl.h"
+ #endif
+ 
+-std:: string hostapd_unix_file(StringPrintf("/data/misc/wifi/hostapd/wlan0"));
++std:: string hostapd_unix_file(StringPrintf("/data/misc/wifi/hostapd/ap0"));
+ #ifdef LIBWPA_CLIENT_EXISTS
+ static const char HOSTAPD_DHCP_DIR[]    = "/data/misc/dhcp";
+ #endif
+@@ -290,7 +290,7 @@ int SoftapController::setSoftap(int argc, char *argv[]) {
+             "hw_mode=%c\n"
+             "ignore_broadcast_ssid=%d\n"
+             "wowlan_triggers=any\n",
+-            argv[2], argv[3], channel, (channel <= 14) ? 'g' : 'a', hidden));
++            "ap0", argv[3], channel, (channel <= 14) ? 'g' : 'a', hidden));
+ 
+     std::string fbuf;
+     if (argc > 7) {

@@ -1,0 +1,215 @@
+From a5a4528fb03221407074a766a853fde37533cb3e Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:24:46 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: I25736f227ca0127fa1bf0a6794ceb64dbbbef720
+
+diff --git a/res/values/pa_strings.xml b/res/values/pa_strings.xml
+index 1930e3373..b6fde31ea 100644
+--- a/res/values/pa_strings.xml
++++ b/res/values/pa_strings.xml
+@@ -18,4 +18,7 @@
+     <!-- Grid -->
+     <string name="pref_grid_title">Grid</string>
+     <string name="pref_grid_default" translatable="false">off</string>
++    <!-- Max brightness -->
++    <string name="pref_camera_max_brightness_title">Bright screen</string>
++    <string name="pref_camera_max_brightness_default" translatable="false">on</string>
+ </resources>
+diff --git a/res/xml/camera_preferences.xml b/res/xml/camera_preferences.xml
+index 5d4ee33e0..d3f85c1aa 100755
+--- a/res/xml/camera_preferences.xml
++++ b/res/xml/camera_preferences.xml
+@@ -419,4 +419,10 @@
+             camera:entries="@array/pref_switch_entries"
+             camera:entryValues="@array/pref_switch_entryvalues"
+             camera:singleIcon="@drawable/ic_settings_grid" />
++    <ListPreference
++            camera:key="pref_max_brightness"
++            camera:defaultValue="@string/pref_camera_max_brightness_default"
++            camera:title="@string/pref_camera_max_brightness_title"
++            camera:entries="@array/pref_switch_entries"
++            camera:entryValues="@array/pref_switch_entryvalues" />
+ </PreferenceGroup>
+diff --git a/res/xml/video_preferences.xml b/res/xml/video_preferences.xml
+index b58b55343..ed2f0ed45 100644
+--- a/res/xml/video_preferences.xml
++++ b/res/xml/video_preferences.xml
+@@ -197,4 +197,10 @@
+             camera:entries="@array/pref_switch_entries"
+             camera:entryValues="@array/pref_switch_entryvalues"
+             camera:singleIcon="@drawable/ic_settings_grid" />
++    <ListPreference
++            camera:key="pref_max_brightness"
++            camera:defaultValue="@string/pref_camera_max_brightness_default"
++            camera:title="@string/pref_camera_max_brightness_title"
++            camera:entries="@array/pref_switch_entries"
++            camera:entryValues="@array/pref_switch_entryvalues" />
+ </PreferenceGroup>
+diff --git a/src/com/android/camera/CameraActivity.java b/src/com/android/camera/CameraActivity.java
+index ace455c83..0b8b2dc5f 100755
+--- a/src/com/android/camera/CameraActivity.java
++++ b/src/com/android/camera/CameraActivity.java
+@@ -226,6 +226,8 @@ public class CameraActivity extends Activity
+     private final Object mStorageSpaceLock = new Object();
+     private long mStorageSpaceBytes = Storage.LOW_STORAGE_THRESHOLD_BYTES;
+     private boolean mSecureCamera;
++    // Keep track of max brightness state
++    public static boolean mMaxBrightness = false;
+     private int mLastRawOrientation;
+     private MyOrientationEventListener mOrientationListener;
+     private Handler mMainHandler;
+@@ -2034,6 +2036,24 @@ public class CameraActivity extends Activity
+         }
+     }
+ 
++    protected void initMaxBrightness(ComboPreferences prefs) {
++        String val = prefs.getString(CameraSettings.KEY_MAX_BRIGHTNESS,
++                getResources().getString(R.string.pref_camera_max_brightness_default));
++
++        Window win = getWindow();
++        WindowManager.LayoutParams params = win.getAttributes();
++
++        mMaxBrightness = val.equals(CameraSettings.VALUE_ON);
++
++        if (mMaxBrightness && mInCameraApp) {
++            params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
++        } else {
++            params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
++        }
++
++        win.setAttributes(params);
++    }
++
+     protected void setResultEx(int resultCode) {
+         mResultCodeForTesting = resultCode;
+         setResult(resultCode);
+diff --git a/src/com/android/camera/CameraSettings.java b/src/com/android/camera/CameraSettings.java
+index 1f9e84273..8297a3dae 100644
+--- a/src/com/android/camera/CameraSettings.java
++++ b/src/com/android/camera/CameraSettings.java
+@@ -81,6 +81,7 @@ public class CameraSettings {
+     public static final String KEY_PHOTOSPHERE_PICTURESIZE = "pref_photosphere_picturesize_key";
+     public static final String KEY_STARTUP_MODULE_INDEX = "camera.startup_module";
+ 
++    public static final String KEY_MAX_BRIGHTNESS = "pref_max_brightness";
+     public static final String KEY_VIDEO_ENCODER = "pref_camera_videoencoder_key";
+     public static final String KEY_AUDIO_ENCODER = "pref_camera_audioencoder_key";
+     public static final String KEY_VIDEO_DURATION = "pref_camera_video_duration_key";
+diff --git a/src/com/android/camera/ComboPreferences.java b/src/com/android/camera/ComboPreferences.java
+index 04783eed5..6a6c99512 100644
+--- a/src/com/android/camera/ComboPreferences.java
++++ b/src/com/android/camera/ComboPreferences.java
+@@ -157,7 +157,8 @@ public class ComboPreferences implements
+                 || key.equals(SettingsManager.KEY_CAMERA_ID)
+                 || key.equals(SettingsManager.KEY_MONO_ONLY)
+                 || key.equals(SettingsManager.KEY_MONO_PREVIEW)
+-                || key.equals(SettingsManager.KEY_CLEARSIGHT);
++                || key.equals(SettingsManager.KEY_CLEARSIGHT)
++                || key.equals(CameraSettings.KEY_MAX_BRIGHTNESS);
+     }
+ 
+     @Override
+diff --git a/src/com/android/camera/PhotoMenu.java b/src/com/android/camera/PhotoMenu.java
+index 0130eb532..daeecd899 100755
+--- a/src/com/android/camera/PhotoMenu.java
++++ b/src/com/android/camera/PhotoMenu.java
+@@ -194,7 +194,8 @@ public class PhotoMenu extends MenuController
+                 CameraSettings.KEY_REDEYE_REDUCTION,
+                 CameraSettings.KEY_SELFIE_MIRROR,
+                 CameraSettings.KEY_SHUTTER_SOUND,
+-                CameraSettings.KEY_GRID
++                CameraSettings.KEY_GRID,
++                CameraSettings.KEY_MAX_BRIGHTNESS
+         };
+ 
+         mOtherKeys2 = new String[] {
+@@ -242,7 +243,8 @@ public class PhotoMenu extends MenuController
+                 CameraSettings.KEY_SELFIE_MIRROR,
+                 CameraSettings.KEY_SHUTTER_SOUND,
+                 CameraSettings.KEY_ZOOM,
+-                CameraSettings.KEY_GRID
++                CameraSettings.KEY_GRID,
++                CameraSettings.KEY_MAX_BRIGHTNESS
+         };
+ 
+         initSwitchItem(CameraSettings.KEY_CAMERA_ID, mFrontBackSwitcher);
+diff --git a/src/com/android/camera/PhotoModule.java b/src/com/android/camera/PhotoModule.java
+index 229410684..fbe4578f2 100644
+--- a/src/com/android/camera/PhotoModule.java
++++ b/src/com/android/camera/PhotoModule.java
+@@ -2677,6 +2677,9 @@ public class PhotoModule
+         Log.v(TAG, "Executing onResumeTasks.");
+         if (mOpenCameraFail || mCameraDisabled) return;
+ 
++        // Max brightness
++        mActivity.initMaxBrightness(mPreferences);
++
+         if (mOpenCameraThread == null) {
+             mOpenCameraThread = new OpenCameraThread();
+             mOpenCameraThread.start();
+@@ -2775,6 +2778,9 @@ public class PhotoModule
+         // (e.g. onResume -> onPause -> onResume).
+         stopPreview();
+ 
++        // Load max brightness
++        mActivity.initMaxBrightness(mPreferences);
++
+         mNamedImages = null;
+ 
+         if (mLocationManager != null) mLocationManager.recordLocation(false);
+@@ -4998,6 +5004,7 @@ public class PhotoModule
+             setCameraParametersWhenIdle(UPDATE_PARAM_PREFERENCE);
+             mUI.updateOnScreenIndicators(mParameters, mPreferenceGroup,
+                 mPreferences);
++            mActivity.initMaxBrightness(mPreferences);
+         } else {
+             mHandler.sendEmptyMessage(SET_PHOTO_UI_PARAMS);
+         }
+diff --git a/src/com/android/camera/VideoMenu.java b/src/com/android/camera/VideoMenu.java
+index d7fa2358f..638f6e753 100755
+--- a/src/com/android/camera/VideoMenu.java
++++ b/src/com/android/camera/VideoMenu.java
+@@ -118,7 +118,8 @@ public class VideoMenu extends MenuController
+                 CameraSettings.KEY_WHITE_BALANCE,
+                 CameraSettings.KEY_VIDEO_HIGH_FRAME_RATE,
+                 CameraSettings.KEY_DIS,
+-                CameraSettings.KEY_GRID
++                CameraSettings.KEY_GRID,
++                CameraSettings.KEY_MAX_BRIGHTNESS
+         };
+         mOtherKeys2 = new String[] {
+                 CameraSettings.KEY_VIDEOCAMERA_FLASH_MODE,
+@@ -143,7 +144,8 @@ public class VideoMenu extends MenuController
+                 CameraSettings.KEY_VIDEO_TNR_MODE,
+                 CameraSettings.KEY_VIDEO_SNAPSHOT_SIZE,
+                 CameraSettings.KEY_ZOOM,
+-                CameraSettings.KEY_GRID
++                CameraSettings.KEY_GRID,
++                CameraSettings.KEY_MAX_BRIGHTNESS
+         };
+         initSwitchItem(CameraSettings.KEY_CAMERA_ID, mFrontBackSwitcher);
+     }
+diff --git a/src/com/android/camera/VideoModule.java b/src/com/android/camera/VideoModule.java
+index 41b2c8b91..711b7b2e0 100644
+--- a/src/com/android/camera/VideoModule.java
++++ b/src/com/android/camera/VideoModule.java
+@@ -501,6 +501,9 @@ public class VideoModule implements CameraModule,
+ 
+         mOrientationManager = new OrientationManager(mActivity);
+ 
++        // Max brightness
++        mActivity.initMaxBrightness(mPreferences);
++
+         /*
+          * To reduce startup time, we start the preview in another thread.
+          * We make sure the preview is started at the end of onCreate.
+@@ -2902,6 +2905,7 @@ public class VideoModule implements CameraModule,
+                 mPreferences.getString(CameraSettings.KEY_CAMERA_SAVEPATH, "0").equals("1"));
+             mActivity.updateStorageSpaceAndHint();
+             mActivity.showGrid(mPreferences);
++            mActivity.initMaxBrightness(mPreferences);
+         }
+     }
+ 

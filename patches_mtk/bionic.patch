@@ -1,0 +1,70 @@
+From 2a9c9fae161419253235a173339390059a0d09f0 Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:18:32 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: If3c36eaf93d4a0dfbad874b0dfae061252c4431c
+
+diff --git a/libc/Android.mk b/libc/Android.mk
+index 693f0a2a6..ff5fae2c2 100644
+--- a/libc/Android.mk
++++ b/libc/Android.mk
+@@ -614,6 +614,7 @@ libc_openbsd_src_files_32 += \
+ libc_common_cflags := \
+     -D_LIBC=1 \
+     -Wall -Wextra -Wunused \
++    -fno-stack-protector \
+ 
+ use_clang := $(USE_CLANG_PLATFORM_BUILD)
+ 
+@@ -643,6 +644,7 @@ libc_common_cflags += \
+     -Werror=int-to-pointer-cast \
+     -Werror=type-limits \
+     -Werror \
++    -fno-stack-protector \
+ 
+ ifeq ($(strip $(DEBUG_BIONIC_LIBC)),true)
+   libc_common_cflags += -DDEBUG
+diff --git a/libc/bionic/ndk_cruft.cpp b/libc/bionic/ndk_cruft.cpp
+index 3ac88f867..6ccb9a15d 100644
+--- a/libc/bionic/ndk_cruft.cpp
++++ b/libc/bionic/ndk_cruft.cpp
+@@ -340,10 +340,13 @@ size_t dlmalloc_usable_size(void* ptr) {
+ }
+ 
+ // In L we added a public pthread_gettid_np, but some apps were using the private API.
+-pid_t __pthread_gettid(pthread_t t) {
++pid_t __pthread_gettid_libc(pthread_t t) {
+   return pthread_gettid_np(t);
+ }
+ 
++__asm__(".symver __pthread_gettid_libc,__pthread_gettid@LIBC");
++__asm__(".symver __pthread_gettid_libc,__pthread_gettid@@LIBC_PRIVATE");
++
+ // Older versions of apportable used dlmalloc directly instead of malloc,
+ // so export this compatibility shim that simply calls malloc.
+ void* dlmalloc(size_t size) {
+diff --git a/libc/libc.arm.map b/libc/libc.arm.map
+index d64faaaed..de25328e7 100644
+--- a/libc/libc.arm.map
++++ b/libc/libc.arm.map
+@@ -124,6 +124,7 @@ LIBC {
+     __pselect6; # arm x86 mips
+     __pthread_cleanup_pop;
+     __pthread_cleanup_push;
++    __pthread_gettid; # arm x86 mips nobrillo
+     __ptrace; # arm x86 mips
+     __putlong;
+     __putshort;
+diff --git a/libc/libc.map.txt b/libc/libc.map.txt
+index fd9c2c68e..356805596 100644
+--- a/libc/libc.map.txt
++++ b/libc/libc.map.txt
+@@ -124,6 +124,7 @@ LIBC {
+     __pselect6; # arm x86 mips
+     __pthread_cleanup_pop;
+     __pthread_cleanup_push;
++    __pthread_gettid; # arm x86 mips nobrillo
+     __ptrace; # arm x86 mips
+     __putlong;
+     __putshort;

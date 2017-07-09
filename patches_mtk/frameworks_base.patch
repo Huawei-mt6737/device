@@ -1,0 +1,19 @@
+From 79f67340652237f6e34190a9ba03a1ff902630f5 Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:23:43 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: Ieca0ae3baf26fe27769fd19779b5f0f0dd036214
+
+diff --git a/core/jni/fd_utils-inl.h b/core/jni/fd_utils-inl.h
+index c3335318a94..92bc7d79907 100644
+--- a/core/jni/fd_utils-inl.h
++++ b/core/jni/fd_utils-inl.h
+@@ -57,6 +57,7 @@ static const char* kPathWhitelist[] = {
+   "/dev/urandom",
+   "/dev/ion",
+   "/dev/dri/renderD129", // Fixes b/31172436
++  "/proc/ged", // MTK add
+ };
+ 
+ static const char* kFdPath = "/proc/self/fd";

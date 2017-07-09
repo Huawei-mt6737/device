@@ -1,0 +1,87 @@
+From 1b7d43e3dc131389cd9730056c74fcca1a5b6ce1 Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:30:41 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: I7e6ca4767f2e8a4b9c15d97b209a9922103d5c18
+
+diff --git a/products/AndroidProducts.mk b/products/AndroidProducts.mk
+index 04f26dc..f7337f2 100644
+--- a/products/AndroidProducts.mk
++++ b/products/AndroidProducts.mk
+@@ -35,4 +35,5 @@
+     $(LOCAL_DIR)/hammerhead/pa_hammerhead.mk \
+     $(LOCAL_DIR)/marlin/pa_marlin.mk \
+     $(LOCAL_DIR)/sailfish/pa_sailfish.mk \
+-    $(LOCAL_DIR)/shamu/pa_shamu.mk
+\ No newline at end of file
++    $(LOCAL_DIR)/shamu/pa_shamu.mk \
++    $(LOCAL_DIR)/razar/pa_razar.mk
+diff --git a/products/razar/pa.dependencies b/products/razar/pa.dependencies
+new file mode 100644
+index 0000000..41b42e6
+--- /dev/null
++++ b/products/razar/pa.dependencies
+@@ -0,0 +1,3 @@
++[
++
++]
+diff --git a/products/razar/pa_razar.mk b/products/razar/pa_razar.mk
+new file mode 100644
+index 0000000..b52479b
+--- /dev/null
++++ b/products/razar/pa_razar.mk
+@@ -0,0 +1,44 @@
++# Copyright (C) 2015-2017 Paranoid Android
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++# Check for target product
++ifeq (pa_razar,$(TARGET_PRODUCT))
++
++# Inherit from those products, most specific first.
++$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
++$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
++
++# Include Paranoid Android common configuration
++TARGET_BOOT_ANIMATION_RES := 720
++
++# Inherit AOSP device configuration
++$(call inherit-product, device/hs/razar/razar.mk)
++
++include vendor/pa/main.mk
++
++# Inherit prebuilt Google apps.
++$(call inherit-product-if-exists, vendor/google/products/gms.mk)
++
++# Device branding
++PRODUCT_DEVICE := razar
++PRODUCT_NAME := pa_razar
++PRODUCT_BRAND := Highscreen
++PRODUCT_MANUFACTURER := Highscreen
++PRODUCT_MODEL := Razar (Pro)
++
++PRODUCT_GMS_CLIENTID_BASE := android-highscreen
++
++PRODUCT_LOCALES := ru_RU en_US
++
++endif
+diff --git a/vendorsetup.sh b/vendorsetup.sh
+index 4623e99..61b79ed 100644
+--- a/vendorsetup.sh
++++ b/vendorsetup.sh
+@@ -21,3 +21,4 @@ add_lunch_combo pa_hammerhead-userdebug
+ add_lunch_combo pa_marlin-userdebug
+ add_lunch_combo pa_sailfish-userdebug
+ add_lunch_combo pa_shamu-userdebug
++add_lunch_combo pa_razar-userdebug
