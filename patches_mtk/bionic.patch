@@ -42,6 +42,7 @@ index 3ac88f867..602adb434 100644
 +__asm__(".symver __pthread_gettid_libc,__pthread_gettid@LIBC");
 +__asm__(".symver __pthread_gettid_libc,__pthread_gettid@@LIBC_PRIVATE");
 +
++
  // Older versions of apportable used dlmalloc directly instead of malloc,
  // so export this compatibility shim that simply calls malloc.
  void* dlmalloc(size_t size) {
