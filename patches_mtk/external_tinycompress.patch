@@ -1,0 +1,20 @@
+From 9987d79748b1122041440da9ddbba85b455bcfc5 Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:40:56 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: Iea918d8d4df1442d57b2d3e999d7fae19d22ea29
+
+diff --git a/Android.mk b/Android.mk
+index 35d4447..9903482 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -2,8 +2,6 @@ LOCAL_PATH:= $(call my-dir)
+ 
+ include $(CLEAR_VARS)
+ LOCAL_C_INCLUDES:= $(LOCAL_PATH)/include
+-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+ LOCAL_SRC_FILES:= compress.c utils.c
+ LOCAL_MODULE := libtinycompress
+ LOCAL_SHARED_LIBRARIES:= libcutils libutils
