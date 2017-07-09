@@ -1,0 +1,93 @@
+From a6477fea1888b0c4bf2ffb80d10718e874333f1a Mon Sep 17 00:00:00 2001
+From: mdeejay <mdjrussia@gmail.com>
+Date: Sun, 9 Jul 2017 13:38:40 +0700
+Subject: changes for MTK (AOSPA)
+
+Change-Id: I7f05b7cee18a7959f7fe97823c055661d2a1e4ff
+
+diff --git a/include/hardware/power.h b/include/hardware/power.h
+index 40e6ca3..ddb5564 100644
+--- a/include/hardware/power.h
++++ b/include/hardware/power.h
+@@ -65,24 +65,16 @@ typedef enum {
+     POWER_HINT_SUSTAINED_PERFORMANCE = 0x00000006,
+     POWER_HINT_VR_MODE = 0x00000007,
+     POWER_HINT_LAUNCH = 0x00000008,
+-    POWER_HINT_DISABLE_TOUCH = 0x00000009
++    POWER_HINT_DISABLE_TOUCH = 0x00000009,
++
++    // CM hints
++    POWER_HINT_CPU_BOOST    = 0x00000110,
++    POWER_HINT_SET_PROFILE  = 0x00000111,
+ } power_hint_t;
+ 
+ typedef enum {
+-    POWER_FEATURE_GESTURES = 0x00000001,
+-    POWER_FEATURE_DOUBLE_TAP_TO_WAKE = 0x00000002,
+-    POWER_FEATURE_DRAW_V = 0x00000003,
+-    POWER_FEATURE_DRAW_INVERSE_V = 0x00000004,
+-    POWER_FEATURE_DRAW_O = 0x00000005,
+-    POWER_FEATURE_DRAW_M = 0x00000006,
+-    POWER_FEATURE_DRAW_W = 0x00000007,
+-    POWER_FEATURE_DRAW_ARROW_LEFT = 0x00000008,
+-    POWER_FEATURE_DRAW_ARROW_RIGHT = 0x00000009,
+-    POWER_FEATURE_ONE_FINGER_SWIPE_UP = 0x0000000A,
+-    POWER_FEATURE_ONE_FINGER_SWIPE_RIGHT = 0x0000000B,
+-    POWER_FEATURE_ONE_FINGER_SWIPE_DOWN = 0x0000000C,
+-    POWER_FEATURE_ONE_FINGER_SWIPE_LEFT = 0x0000000D,
+-    POWER_FEATURE_TWO_FINGER_SWIPE = 0x0000000E
++    POWER_FEATURE_DOUBLE_TAP_TO_WAKE = 0x00000001,
++    POWER_FEATURE_SUPPORTED_PROFILES = 0x00001000
+ } feature_t;
+ 
+ /*
+@@ -171,6 +163,15 @@ typedef struct {
+ } power_state_platform_sleep_state_t;
+ 
+ /**
++ * Process info, passed as an opaque handle when
++ * using POWER_HINT_LAUNCH_BOOST.
++ */
++typedef struct launch_boost_info {
++    pid_t pid;
++    const char* packageName;
++} launch_boost_info_t;
++
++/**
+  * Every hardware module must have a data structure named HAL_MODULE_INFO_SYM
+  * and the fields of this data structure must begin with hw_module_t
+  * followed by module specific information.
+@@ -270,6 +271,12 @@ typedef struct power_module {
+      *     The data parameter is non-zero when touch could be disabled, and zero
+      *     when touch needs to be re-enabled.
+      *
++     * POWER_HINT_CPU_BOOST
++     *
++     *     An operation is happening where it would be ideal for the CPU to
++     *     be boosted for a specific duration. The data parameter is an
++     *     integer value of the boost duration in microseconds.
++     *
+      * A particular platform may choose to ignore any hint.
+      *
+      * availability: version 0.2
+@@ -293,6 +300,12 @@ typedef struct power_module {
+     void (*setFeature)(struct power_module *module, feature_t feature, int state);
+ 
+     /*
++     * (*getFeature) is called to get the current value of a particular
++     * feature or capability from the hardware or PowerHAL
++     */
++    int (*getFeature)(struct power_module *module, feature_t feature);
++
++    /*
+      * Platform-level sleep state stats:
+      * Report cumulative info on the statistics on platform-level sleep states since boot.
+      *
+@@ -350,7 +363,6 @@ typedef struct power_module {
+ 
+ } power_module_t;
+ 
+-
+ __END_DECLS
+ 
+ #endif  // ANDROID_INCLUDE_HARDWARE_POWER_H
