@@ -23,7 +23,6 @@ PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
 
 # Bootanimation
-TARGET_BOOTANIMATION_HALF_RES := true
 TARGET_SCREEN_HEIGHT := 1280
 TARGET_SCREEN_WIDTH := 720
 
@@ -282,11 +281,7 @@ PRODUCT_PACKAGES += \
 
 # Camera
 PRODUCT_PACKAGES += \
-    Snap
-
-# Browser
-PRODUCT_PACKAGES += \
-    Jelly
+    SnapdragonCamera
 
 # mrdump
 PRODUCT_PACKAGES += \

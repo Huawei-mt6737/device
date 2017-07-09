@@ -1,4 +1,0 @@
-add_lunch_combo lineage_razar-eng
-add_lunch_combo lineage_razar-userdebug
-add_lunch_combo lineage_razar-user
-
