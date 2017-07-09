@@ -151,11 +151,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/root/ueventd.mt6735.rc:root/ueventd.mt6735.rc \
     $(LOCAL_PATH)/rootdir/root/init.project.rc:root/init.project.rc
 
-# Spectrum support
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/root/init.spectrum.sh:root/init.spectrum.sh \
-    $(LOCAL_PATH)/rootdir/root/init.spectrum.rc:root/init.spectrum.rc
-
 # Permissions
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \

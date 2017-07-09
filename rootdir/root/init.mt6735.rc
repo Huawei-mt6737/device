@@ -1,6 +1,5 @@
 import init.mt6735.usb.rc
 import init.project.rc
-import init.spectrum.rc
 import init.modem.rc
 
 on late-fs
