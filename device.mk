@@ -16,14 +16,13 @@
 
 LOCAL_PATH := device/hs/razar
 
-DEVICE_PACKAGE_OVERLAYS += device/hs/razar/overlay
+DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
 
 # AAPT configs
 PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
 
 # Bootanimation
-TARGET_BOOTANIMATION_HALF_RES := true
 TARGET_SCREEN_HEIGHT := 1280
 TARGET_SCREEN_WIDTH := 720
 
@@ -113,6 +112,10 @@ PRODUCT_COPY_FILES += \
      $(LOCAL_PATH)/configs/gps/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml \
      $(LOCAL_PATH)/configs/gps/slp_conf:system/etc/slp_conf
 
+PRODUCT_PACKAGES += \
+    wifi2agps \
+    wmt_loader
+
 $(call inherit-product, device/common/gps/gps_us_supl.mk)
 
 # FM
@@ -123,6 +126,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/ecc_list.xml:system/etc/ecc_list.xml \
     $(LOCAL_PATH)/configs/spn-conf.xml:system/etc/spn-conf.xml
+
+PRODUCT_PACKAGES += \
+    md_ctrl
 
 # Keylayout
 PRODUCT_COPY_FILES += \
@@ -143,11 +149,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/root/twrp.fstab:recovery/root/etc/twrp.fstab \
     $(LOCAL_PATH)/rootdir/root/ueventd.mt6735.rc:root/ueventd.mt6735.rc \
     $(LOCAL_PATH)/rootdir/root/init.project.rc:root/init.project.rc
-
-# Spectrum support
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/root/init.spectrum.sh:root/init.spectrum.sh \
-    $(LOCAL_PATH)/rootdir/root/init.spectrum.rc:root/init.spectrum.rc
 
 # Permissions
 PRODUCT_COPY_FILES += \
@@ -193,10 +194,13 @@ PRODUCT_PACKAGES += \
 
 # Audio
 PRODUCT_PACKAGES += \
+    audio.a2dp.default \
     audio.r_submix.default \
     audio.usb.default \
     audio_policy.stub \
+    libaudiopolicymanagerdefault \
     libaudio-resampler \
+    libaudiosetting \
     libtinyalsa \
     libtinycompress \
     libtinymix \
@@ -227,7 +231,18 @@ PRODUCT_PACKAGES += \
 # GPS
 PRODUCT_PACKAGES += \
     gps.mt6737t \
+    libepos \
+    mnld \
+    libmnl \
     libcurl
+
+# BT MTK
+PRODUCT_PACKAGES += \
+    libbluetooth_mtk \
+    libbt-vendor \
+    libbluetooth_mtk_pure \
+    libbluetoothem_mtk \
+    libbluetooth_relayer
 
 # FM Radio
 PRODUCT_PACKAGES += \
@@ -236,9 +251,31 @@ PRODUCT_PACKAGES += \
     libfmjni \
     libfmcust
 
-# ION
+# Fuelgauge
 PRODUCT_PACKAGES += \
-    libion
+    fuelgauged \
+    libfgauge
+
+# NVRAM
+PRODUCT_PACKAGES += \
+    libnvram \
+    libcustom_nvram
+
+# GUI UI MTK props
+PRODUCT_PACKAGES += \
+    libgralloc_extra \
+    libdpframework \
+    libgui_ext \
+    libui_ext \
+    libion_mtk \
+    libion \
+    librrc
+
+# Thermal manager
+PRODUCT_PACKAGES += \
+    thermal_manager \
+    libmtcloader \
+    libperfservicenative
 
 # Camera
 PRODUCT_PACKAGES += \

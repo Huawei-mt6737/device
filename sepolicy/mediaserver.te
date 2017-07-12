@@ -18,6 +18,3 @@ allow mediaserver pq_service:service_manager find;
 
 # Audio
 allow mediaserver audiohal_prop:property_service set;
-
-allow mediaserver guiext-server:binder { transfer call };
-binder_call(mediaserver, guiext-server)

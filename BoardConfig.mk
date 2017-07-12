@@ -16,11 +16,11 @@
 
 LOCAL_PATH := device/hs/razar
 
-TARGET_GLOBAL_CFLAGS   += -mfpu=neon -mfloat-abi=softfp
-TARGET_GLOBAL_CPPFLAGS += -mfpu=neon -mfloat-abi=softfp
+BOARD_GLOBAL_CFLAGS += -DNO_SECURE_DISCARD
+BOARD_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
 
 # GPS
-TARGET_SPECIFIC_HEADER_PATH := device/hs/razar/include
+TARGET_SPECIFIC_HEADER_PATH := $(LOCAL_PATH)/include
 BOARD_GPS_LIBRARIES := true
 BOARD_CONNECTIVITY_MODULE := conn_soc 
 BOARD_MEDIATEK_USES_GPS := true
@@ -73,7 +73,7 @@ TARGET_BOOTLOADER_BOARD_NAME := mt6737t
 #BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 #TARGET_KERNEL_SOURCE := kernel-3.18
 #TARGET_KERNEL_CONFIG := razar_defconfig
-TARGET_PREBUILT_KERNEL := device/hs/razar/rootdir/kernel
+TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/rootdir/kernel
 BOARD_KERNEL_BASE = 0x40000000
 BOARD_KERNEL_PAGESIZE := 2048
 BOARD_RAMDISK_OFFSET = 0x04000000
@@ -114,14 +114,12 @@ TARGET_CPU_MEMCPY_OPT_DISABLE := true
 TARGET_PROVIDES_LIBLIGHT := true
 
 # Graphics
-BOARD_EGL_CFG := device/hs/razar/egl.cfg
+BOARD_EGL_CFG := $(LOCAL_PATH)/egl.cfg
 BOARD_EGL_WORKAROUND_BUG_10194508 := true
 USE_OPENGL_RENDERER := true
 NUM_FRAMEBUFFER_SURFACE_BUFFERS := 3
 TARGET_RUNNING_WITHOUT_SYNC_FRAMEWORK := true
 TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS := true
-MAX_VIRTUAL_DISPLAY_DIMENSION := 1
-PRESENT_TIME_OFFSET_FROM_VSYNC_NS := 0
 MTK_HWC_SUPPORT := yes
 MTK_HWC_VERSION := 1.4.1
 
@@ -145,7 +143,7 @@ BACKLIGHT_PATH := /sys/class/leds/lcd-backlight/brightness
 WITH_SU := true
 
 # RIL
-BOARD_RIL_CLASS := ../../../device/hs/razar/ril/
+BOARD_RIL_CLASS := ../../../$(LOCAL_PATH)/ril/
 
 BOARD_DISABLE_HW_ID_MATCH_CHECK := true
 
@@ -167,7 +165,7 @@ WIFI_DRIVER_FW_PATH_P2P:=P2P
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_MTK := true
 BOARD_BLUETOOTH_DOES_NOT_USE_RFKILL := true
-BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := device/hs/razar/bluetooth
+BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(LOCAL_PATH)/bluetooth
 
 # Sensors
 TARGET_NO_SENSOR_PERMISSION_CHECK := true
@@ -177,8 +175,8 @@ TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS := true
 USE_MINIKIN := true
 
 # CWM
-TARGET_RECOVERY_FSTAB := device/hs/razar/rootdir/root/recovery.fstab
-TARGET_PREBUILT_RECOVERY_KERNEL := device/hs/razar/rootdir/kernel
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/root/recovery.fstab
+TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/rootdir/kernel
 BOARD_HAS_NO_SELECT_BUTTON := true
 
 # TWRP stuff
@@ -199,13 +197,12 @@ TW_USE_TOOLBOX := true
 
 TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun%d/file"
 
-BOARD_SEPOLICY_DIRS := \
-       device/hs/razar/sepolicy
+BOARD_SEPOLICY_DIRS := $(LOCAL_PATH)/sepolicy
 
 # Use old sepolicy version
 POLICYVERS := 29
 
 # Seccomp filter
-BOARD_SECCOMP_POLICY := device/hs/razar/seccomp
+BOARD_SECCOMP_POLICY := $(LOCAL_PATH)/seccomp
 
 MTK_GPU_VERSION := mali midgard r7p0
